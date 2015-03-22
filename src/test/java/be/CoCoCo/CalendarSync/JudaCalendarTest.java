@@ -65,11 +65,11 @@ public class JudaCalendarTest extends TestCase {
     // Test getFirst()
     CalendarItem item = judaCalendar.getFirst ();
     assertNotNull (item);
-    assertEquals ("1999/0111-0 - AF - Bespreking (elders) :", item.getSummary ());
+    assertEquals ("2011/0158-0 - TDD - Conclusie (2)", item.getSummary ());
     // Test getNext()
     item=judaCalendar.getNext ();
     assertNotNull (item);
-    assertEquals ("1999/0111-1 - TD - Besluiten, verzoekschrift - zitting", item.getSummary ());
+    assertEquals ("2011/0158-0 - TDD - Conclusie (3) - laatste", item.getSummary ());
 }
 
   /**
