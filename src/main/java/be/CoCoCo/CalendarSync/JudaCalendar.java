@@ -44,8 +44,8 @@ public class JudaCalendar implements Calendar {
    */
   public JudaCalendar (Integer lookForwardWindow, Integer lookBackWindow,
       Properties properties) {
-    startLookWindow.add (java.util.Calendar.DAY_OF_YEAR, -lookForwardWindow);
-    endLookWindow.add (java.util.Calendar.DAY_OF_YEAR, lookBackWindow);
+    startLookWindow.add (java.util.Calendar.DAY_OF_YEAR, -lookBackWindow);
+    endLookWindow.add (java.util.Calendar.DAY_OF_YEAR, lookForwardWindow);
     databaseLocation = properties.getProperty ("juda.calendar.database");
     username = properties.getProperty ("juda.calendar.username");
     updateFileName = properties.getProperty ("juda.calendar.updateFileName");
@@ -149,15 +149,15 @@ public class JudaCalendar implements Calendar {
       // Create JudaItem from record
       judaItem = new JudaItem (judaDatabase);
 
-      // if item not valid or user not match, take next record
-      if ((! judaItem.valid()) || (null == judaItem.getUser()) || (!judaItem.getUser ().equalsIgnoreCase (username))
-          // if item not within synchronization window take next record
-          || (null == judaItem.getStartDate() || judaItem.getStartDate ().before (startLookWindow.getTime ()) || 
-          (null != judaItem.getEndDate() && judaItem.getEndDate ().after (endLookWindow.getTime ()) ))) {
-        judaItem = null;
-        continue;
-      } else 
+      // If judaItem is a valid item, the user matches and the record between startLookWindow 
+      // and endLookWindow return item
+      if ( (judaItem.valid()) && 
+           (judaItem.getUser ().equalsIgnoreCase (username)) &&
+           (judaItem.getStartDate().before (endLookWindow)) &&
+           (judaItem.getEndDate ().after (startLookWindow)) ) {
         break;
+      } else
+        judaItem = null;
     }
 
     logger.trace ("Exiting getNext");
@@ -294,7 +294,5 @@ public class JudaCalendar implements Calendar {
     logger.trace("Exiting createHeader");
     return header;
   }
-
-
  
 }

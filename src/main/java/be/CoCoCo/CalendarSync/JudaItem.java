@@ -194,7 +194,10 @@ public class JudaItem implements CalendarItem {
    */
   public Calendar getEndDate () {
     logger.trace ("getEndDate");
-    return agEndDate;
+    if (null==agEndDate) 
+      return agStartDate;
+    else 
+      return agEndDate;
   }
 
   /*
