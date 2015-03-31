@@ -12,8 +12,6 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
-import be.CoCoCo.CalendarSync.MappingDatabase;
-import be.CoCoCo.CalendarSync.MappingDatabaseException;
 import be.CoCoCo.CalendarSync.CalendarException;
 import be.CoCoCo.CalendarSync.ZarafaCalendar;
 
@@ -27,7 +25,6 @@ public class CalendarSync {
   static Logger logger = Logger.getLogger (ZarafaCalendar.class);
   private static File propertiesFile = null;
   private static Properties properties;
-  private static MappingDatabase mappingDatabase;
   private static Calendar sourceCalendar;
   private static ZarafaCalendar targetCalendar;
 
@@ -86,15 +83,6 @@ public class CalendarSync {
   private static void initalize () {
     logger.trace ("Entering initialisation");
     
-    // Open the MappingDatabase
-    try {
-      mappingDatabase = new MappingDatabase (properties);
-    } catch (MappingDatabaseException e) {
-      logger.error ("Unable to open mappingDatabase");
-      logger.info (e);
-      System.exit (1);
-    }
-    
     String propertyValue = properties.getProperty ("lookForwardWindow", "90");
     Integer lookForwardWindow = new Integer(propertyValue);
     propertyValue = properties.getProperty ("lookBackWindow", "90");
@@ -124,18 +112,7 @@ public class CalendarSync {
     
     while (null != sourceItem) {
       String sourceID = sourceItem.getID ();
-      String targetID;
-      try {
-        targetID = mappingDatabase.find (sourceID);
-      } catch (MappingDatabaseException e) {
-        logger.error ("Error opening calendars");
-        logger.info (e);
-        continue;
-      }
-      if (null != targetID) 
-        targetItem = targetCalendar.getById (targetID);
-      else 
-        targetItem = targetCalendar.getById (sourceID);
+      targetItem = targetCalendar.getById (sourceID);
       if (null == targetItem || sourceItem.isNewer (targetItem)) {
         logger.trace ("CalendarItem " + sourceItem.getID () + " added te other Calendar");
         targetCalendar.modify (sourceItem);

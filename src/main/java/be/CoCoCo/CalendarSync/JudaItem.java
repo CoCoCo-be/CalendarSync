@@ -5,6 +5,7 @@
  */
 package be.CoCoCo.CalendarSync;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -25,6 +26,7 @@ import org.xBaseJ.fields.LogicalField;
 public class JudaItem implements CalendarItem {
 
   // Fields
+  static private DBF database;
   private String     agID;
   private String     agUser;
   private Calendar   agDate;
@@ -36,6 +38,7 @@ public class JudaItem implements CalendarItem {
   private String     description;
   private String     summary;
   private String     agKind;
+  private String     agSyncID;
   private boolean    agExport;
   private boolean    agTransparant;
 
@@ -50,6 +53,7 @@ public class JudaItem implements CalendarItem {
   static String  dossierField    = "AGDOSSIER";
   static String  userField       = "AGUSERNS";
   static String  exportField     = "AGEXPORT";
+  static String  syncField       = "AGOUTLID";
   static String  temporaryField  = "AGVOORL";
 
   static String  dateFormatYMdhm = "yyyyMMddhhmm";
@@ -65,18 +69,20 @@ public class JudaItem implements CalendarItem {
    *          database positioned on the record to read.s
    */
   public JudaItem (DBF judaDatabase) {
-    agID = readCharField (idField, judaDatabase);
-    agDate = readCalendarField (dateField, dateFormatYMd, judaDatabase);
-    agEndTime = readTimeField(endTimeField, timeFormatHHMM, judaDatabase);
-    agStartTime = readTimeField(startTimeField, timeFormatHHMM, judaDatabase);
-    agModified = readCalendarField (changeDateField, dateFormatYMd, judaDatabase);
-    agExport = readLogicalField (exportField, judaDatabase);
-    agTransparant = readLogicalField (temporaryField, judaDatabase);
-    agKind = readCharField (kindField, judaDatabase);
-    String agSummary = readCharField (summaryField, judaDatabase);
-    String agDescription = readCharField (descriptionField, judaDatabase);
-    String agDossier = readCharField (dossierField, judaDatabase);
-    agUser = readCharField (userField, judaDatabase);
+    database = judaDatabase;
+    agID = readCharField (idField);
+    agDate = readCalendarField (dateField, dateFormatYMd);
+    agEndTime = readTimeField(endTimeField, timeFormatHHMM);
+    agStartTime = readTimeField(startTimeField, timeFormatHHMM);
+    agModified = readCalendarField (changeDateField, dateFormatYMd);
+    agExport = readLogicalField (exportField);
+    agTransparant = readLogicalField (temporaryField);
+    agKind = readCharField (kindField);
+    String agSummary = readCharField (summaryField);
+    String agDescription = readCharField (descriptionField);
+    String agDossier = readCharField (dossierField);
+    agUser = readCharField (userField);
+    agSyncID = readCharField (syncField);
 
     if (! (null == agDate)) {
       if ((null == agStartTime) || (null == agEndTime)) {
@@ -96,6 +102,8 @@ public class JudaItem implements CalendarItem {
       agID = String.format("%x", new BigInteger(agIDString.getBytes()));
     }
     
+    if (0 == agSyncID.length()) agSyncID=null;
+    
     description = agDescription;
     summary = agDossier + " - " + agSummary;
   }
@@ -105,7 +113,12 @@ public class JudaItem implements CalendarItem {
    */
   public boolean valid() {
     logger.trace("valid");
-    Integer kind = Integer.decode (agKind);
+    Integer kind;
+    try {
+      kind = Integer.decode (agKind);
+    } catch (NumberFormatException e) {
+      return false;
+    }
     switch (kind) {
       case   0:
       case   1:
@@ -116,13 +129,13 @@ public class JudaItem implements CalendarItem {
       case  13:
       case  14:
       case  26:
-      case  29:
       case  31:
       case  32:
       case  56:
       case  58:
       case  60:
       case  64:
+      case  29:
       case  78:
       case  82:
       case  86:
@@ -145,7 +158,12 @@ public class JudaItem implements CalendarItem {
    */
   public String getID () {
     logger.trace ("getID");
-    return agID + "@CoCoCo.be";
+    if (null == agSyncID) {
+       logger.trace("Create new ID");
+       agSyncID = agID + "@CoCoCo.be";
+       writeCharField(syncField, agSyncID);
+    } 
+    return agSyncID;
   }
 
   /*
@@ -234,20 +252,19 @@ public class JudaItem implements CalendarItem {
     return agUser;
   }
   
- /**
+  /**
    * Reads a data from a juda Database into Calendar value
    * 
    * @param fieldName Name of field to be read
    * @param format Format of datefield
-   * @param judaDatabase judaDatabase to read from
    * @return {@link Calendar} value from field with name fieldName
    */
-  private Calendar readCalendarField (String fieldName, String format, DBF judaDatabase) {
+  private Calendar readCalendarField (String fieldName, String format) {
     logger.trace ("Entering readDataField");
 
     DateField agCalendar = null;
     try {
-      agCalendar = (DateField) judaDatabase.getField (fieldName);
+      agCalendar = (DateField) database.getField (fieldName);
     } catch (ArrayIndexOutOfBoundsException e) {
       logger.error ("Array index out of bound");
       logger.info (e);
@@ -283,15 +300,14 @@ public class JudaItem implements CalendarItem {
   /**
    * @param endTimeField2
    * @param timeFormatHHMM2
-   * @param judaDatabase
    * @return
    */
-  private Calendar readTimeField (String fieldName, String format, DBF judaDatabase) {
+  private Calendar readTimeField (String fieldName, String format) {
     logger.trace ("Entering readTimeField");
     
     CharField agTime = null;
     try {
-      agTime = (CharField) judaDatabase.getField (fieldName);
+      agTime = (CharField) database.getField (fieldName);
     } catch (ArrayIndexOutOfBoundsException e) {
       logger.error ("Array index out of bound");
       logger.info (e);
@@ -332,17 +348,15 @@ public class JudaItem implements CalendarItem {
    * 
    * @param fieldName
    *          the name of the field
-   * @param judaDatabase
-   *          the database to read from
    * @return Value of the field
    */
-  private String readCharField (String fieldName, DBF judaDatabase) {
+  private String readCharField (String fieldName) {
 
     logger.trace ("Entering readCharField");
 
     CharField agField = null;
     try {
-      agField = (CharField) judaDatabase.getField (fieldName);
+      agField = (CharField) database.getField (fieldName);
     } catch (ArrayIndexOutOfBoundsException e) {
       logger.error ("Array index out of bound");
       logger.info (e);
@@ -360,21 +374,56 @@ public class JudaItem implements CalendarItem {
   }
 
   /**
+   * Write character field to Database
+   * 
+   * @param sting
+   */
+  private void writeCharField (String fieldName, String value) {
+    logger.trace ("Entering writeSyncID");
+    
+    CharField agField = null;
+
+    try {
+      agField = (CharField) database.getField (fieldName);
+    } catch (ArrayIndexOutOfBoundsException e) {
+      logger.error ("Array index out of bound");
+      logger.info (e);
+      return;
+    } catch (xBaseJException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+      return;
+    }
+
+    if (null == agField) return;
+    try {
+      agField.put (value);
+      database.update ();
+    } catch (xBaseJException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+      return;
+    } catch (IOException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+      return;
+    }
+  }
+  
+  /**
    * read boolean field from database
    * 
    * @param fieldName
    *          the name of the field
-   * @param judaDatabase
-   *          the database to read from
    * @return Value of the field
    */
-  private boolean readLogicalField (String fieldName, DBF judaDatabase) {
+  private boolean readLogicalField (String fieldName) {
 
     logger.trace ("Entering readLogicalField");
 
     LogicalField agField = null;
     try {
-      agField = (LogicalField) judaDatabase.getField (fieldName);
+      agField = (LogicalField) database.getField (fieldName);
     } catch (ArrayIndexOutOfBoundsException e) {
       logger.error ("Array index out of bound");
       logger.info (e);

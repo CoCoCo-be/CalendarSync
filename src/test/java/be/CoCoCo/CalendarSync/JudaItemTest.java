@@ -59,7 +59,7 @@ public class JudaItemTest extends TestCase {
    * Test method for {@link be.CoCoCo.CalendarSync.JudaItem#getID()}.
    */
   public final void testGetID () {
-    assertEquals ("1@CoCoCo.be", judaItem1.getID ());
+    assertEquals ("JudaItem1", judaItem1.getID ());
     assertEquals ("2@CoCoCo.be", judaItem2.getID ());
   }
 

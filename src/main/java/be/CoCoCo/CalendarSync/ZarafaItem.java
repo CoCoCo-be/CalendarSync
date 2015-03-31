@@ -253,4 +253,12 @@ public class ZarafaItem implements CalendarItem {
     return false;
   }
 
+  /* (non-Javadoc)
+   * @see be.CoCoCo.CalendarSync.CalendarItem#addOtherID(java.lang.String)
+   */
+  public void addOtherID (String targetID) {
+    // TODO Auto-generated method stub
+    
+  }
+
 }
