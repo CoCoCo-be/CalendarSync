@@ -46,17 +46,19 @@ public class JudaItem implements CalendarItem {
   static String  dateField       = "AGDATUM";
   static String  endTimeField    = "AGETIJD";
   static String  startTimeField  = "AGBTIJD";
-  static String  changeDateField = "AGCHADAT";    // datefield
+  static String  changeDateField = "AGDATTIJD";    // datefield
+  static String  oldChangeDateField = "AGCHADAT";    // datefield
   static String  summaryField    = "AGSRTNRN";
   static String  kindField       = "AGSRTNR";
   static String  descriptionField= "AGOMSCH";
   static String  dossierField    = "AGDOSSIER";
   static String  userField       = "AGUSERNS";
   static String  exportField     = "AGEXPORT";
-  static String  syncField       = "AGOUTLID";
+  static String  syncField       = "AGZARAFA";
   static String  temporaryField  = "AGVOORL";
 
   static String  dateFormatYMdhm = "yyyyMMddhhmm";
+  static String  dateFormatYMdhms = "yyyyMMddhhmmss";
   static String  dateFormatYMd   = "yyyyMMdd";
   static String  dateFormatMDY   = "MM/dd/yy";
   static String  dateFormatDMY   = "dd/MM/yy";
@@ -74,7 +76,8 @@ public class JudaItem implements CalendarItem {
     agDate = readCalendarField (dateField, dateFormatYMd);
     agEndTime = readTimeField(endTimeField, timeFormatHHMM);
     agStartTime = readTimeField(startTimeField, timeFormatHHMM);
-    agModified = readCalendarField (changeDateField, dateFormatYMd);
+    agModified = readCalendarField (changeDateField, dateFormatYMdhms);
+    Calendar agModifiedOld = readCalendarField (oldChangeDateField, dateFormatDMY);
     agExport = readLogicalField (exportField);
     agTransparant = readLogicalField (temporaryField);
     agKind = readCharField (kindField);
@@ -84,6 +87,8 @@ public class JudaItem implements CalendarItem {
     agUser = readCharField (userField);
     agSyncID = readCharField (syncField);
 
+    if (null == agModified) agModified = agModifiedOld;
+    
     if (! (null == agDate)) {
       if ((null == agStartTime) || (null == agEndTime)) {
         agEndDate = null;
@@ -106,6 +111,57 @@ public class JudaItem implements CalendarItem {
     
     description = agDescription;
     summary = agDossier + " - " + agSummary;
+  }
+
+  /**
+   * @param databaseLocation
+   * @param item
+   */
+  public JudaItem (DBF judaDatabase, CalendarItem item) {
+    // create new record
+    // create modified
+    writeTimeField(changeDateField, dateFormatYMdhms, item.lastModified ());
+
+    // create startdate
+    writeCalendarField(startTimeField, timeFormatHHMM, item.getStartDate ());
+
+    // create enddate
+    if (null != item.getEndDate ())
+      writeCalendarField(endTimeField, timeFormatHHMM, item.getEndDate ());
+    
+    // create summary
+    String summary = item.getSummary ();
+    String[] summaryList = summary.split ("-");
+    if (1==summaryList.length) {
+      // No dossier number in summarylist so insert default dossier number
+      DateFormat formater = new SimpleDateFormat ("yyyy");
+      String year = formater.format (Calendar.getInstance ());
+      String defaultDossier = year+"/0001-0";
+      writeCharField(dossierField, defaultDossier);
+      writeCharField(summaryField, summaryList[0]);
+    } else {
+      // Add all summary fields together and then write dossier number and 
+      // summary to database
+      writeCharField(dossierField, summaryList[0]);
+      String summaryString = summaryList[1];
+      for(int i = 2; i < summaryList.length; i++) {
+        summaryString = summaryString + "-" + summaryList[i-1];
+      }
+      writeCharField(summaryField, summaryString); 
+    }
+
+    // create Description
+    writeCharField (descriptionField, item.getDescription ());
+    try {
+      judaDatabase.write(true);
+    } catch (xBaseJException e) {
+      logger.error ("Error writing record to database");
+      logger.info (e);
+    } catch (IOException e) {
+      logger.error ("Error writing record to database");
+      logger.info (e); 
+    }
+
   }
 
   /**
@@ -298,8 +354,52 @@ public class JudaItem implements CalendarItem {
   }
 
   /**
-   * @param endTimeField2
-   * @param timeFormatHHMM2
+   * Write value to a juda Database 
+   * 
+   * @param fieldName Name of field to be read
+   * @param format Format of datefield
+   * @param value from field with name fieldName
+   */
+  private void writeCalendarField (String fieldName, String format, Calendar value) {
+    logger.trace ("Entering writeDataField");
+
+    DateField agField = null;
+    try {
+      agField = (DateField) database.getField (fieldName);
+    } catch (ArrayIndexOutOfBoundsException e) {
+      logger.error ("Array index out of bound");
+      logger.info (e);
+      agField = null;
+    } catch (xBaseJException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+      agField = null;
+    }
+
+    if (null == agField) return;
+    DateFormat formater = new SimpleDateFormat (format);
+    String dateString = formater.format (value);
+    
+    try{
+      agField.put (dateString);
+      database.update ();
+    } catch (xBaseJException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+    } catch (IOException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+    }
+
+    logger.trace ("Exiting writeDataField");
+    return;
+  }
+
+  /**
+   * Reads time field from a juda Database into Calendar value
+   * 
+   * @param fieldName
+   * @param format
    * @return
    */
   private Calendar readTimeField (String fieldName, String format) {
@@ -343,6 +443,18 @@ public class JudaItem implements CalendarItem {
     return result;
   }
   
+  /**
+   * Writes time field to a juda Database 
+   * 
+   * @param fieldName
+   * @param format
+   * @param value
+   */
+  private void writeTimeField (String fieldName, String format, Calendar value) {
+    writeCalendarField(fieldName, format, value);
+    return;
+  }
+
   /**
    * read character field from database
    * 
@@ -440,6 +552,47 @@ public class JudaItem implements CalendarItem {
     return result;
   }
 
+  /**
+   * write boolean field to database
+   * 
+   * @param fieldName
+   *          the name of the field
+   *        value
+   *          the boolean value
+   */
+  private void writeLogicalField (String fieldName, Boolean value) {
+
+    logger.trace ("Entering writeLogicalField");
+
+    LogicalField agField = null;
+    try {
+      agField = (LogicalField) database.getField (fieldName);
+    } catch (ArrayIndexOutOfBoundsException e) {
+      logger.error ("Array index out of bound");
+      logger.info (e);
+      agField = null;
+    } catch (xBaseJException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+      agField = null;
+    }
+
+    if (null == agField) return;
+    try{
+      agField.put (value);
+      database.update ();
+    } catch (xBaseJException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+    } catch (IOException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+    }
+    
+    logger.trace ("Exiting writeField");
+    return;
+  }
+
   /*
    * (non-Javadoc)
    * 
@@ -485,11 +638,59 @@ public class JudaItem implements CalendarItem {
     return true;
   }
 
-  /* (non-Javadoc)
+  /* 
+   * (non-Javadoc)
    * @see be.CoCoCo.CalendarSync.CalendarItem#allDayEvent()
    */
   public boolean isTransparent () {
     return agTransparant;
   }
+
+  /**
+   * @param judaItem
+   */
+  protected void modify (DBF judaDatabase, CalendarItem item) {
+    // change modified
+    writeTimeField(changeDateField, dateFormatYMdhms, item.lastModified ());
+
+    // change startdate
+    writeCalendarField(startTimeField, timeFormatHHMM, item.getStartDate ());
+
+    // change enddate
+    if (null != item.getEndDate ())
+      writeCalendarField(endTimeField, timeFormatHHMM, item.getEndDate ());
+    
+    // change summary
+    String summary = item.getSummary ();
+    String[] summaryList = summary.split ("-");
+    if (1==summaryList.length) {
+      // No dossier number in summarylist so leave unchanged
+      writeCharField(summaryField, summaryList[0]);
+    } else {
+      // Add all summary fields together and then write dossier number and 
+      // summary to database
+      writeCharField(dossierField, summaryList[0]);
+      String summaryString = summaryList[1];
+      for(int i = 2; i < summaryList.length; i++) {
+        summaryString = summaryString + "-" + summaryList[i-1];
+      }
+      writeCharField(summaryField, summaryString); 
+    }
+
+    // change Description
+    writeCharField (descriptionField, item.getDescription ());
+    
+    try {
+      judaDatabase.write(true);
+    } catch (xBaseJException e) {
+      logger.error ("Error writing record to database");
+      logger.info (e);
+    } catch (IOException e) {
+      logger.error ("Error writing record to database");
+      logger.info (e); 
+    }
+    
+  }
+
 
 }

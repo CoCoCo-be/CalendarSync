@@ -6,16 +6,11 @@ package be.CoCoCo.CalendarSync;
  */
 
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.Properties;
 
 import org.xBaseJ.DBF;
 import org.xBaseJ.xBaseJException;
-
-import au.com.bytecode.opencsv.CSVWriter;
 
 /**
  * @author Kris Cox
@@ -30,9 +25,6 @@ public class JudaCalendar implements Calendar {
   private DBF                judaDatabase;
   private boolean            open;
   private String             username;
-  private String             updateFileName;
-  // Maxid: next id for Calendar is maxid + 1
-  private Integer            maxID = 0;
 
   /**
    * Constructor with lookBackwindow, lookForwardWindow and properties
@@ -48,19 +40,7 @@ public class JudaCalendar implements Calendar {
     endLookWindow.add (java.util.Calendar.DAY_OF_YEAR, lookForwardWindow);
     databaseLocation = properties.getProperty ("juda.calendar.database");
     username = properties.getProperty ("juda.calendar.username");
-    updateFileName = properties.getProperty ("juda.calendar.updateFileName");
-//    maxID = GetMaxID();
   }
-
-  /**
-   * @return
-   */
-//  private Integer GetMaxID () {
-//    JudaItem judaItem = (JudaItem) getFirst ();
-//    while (!(null == judaItem))
-//      maxID =  Math.max(maxID, Integer.valueOf (judaItem.getID ()));
-//    return maxID;
-//  }
 
   /**
    * Constructor with lookBackwindow and properties containing urlStrin,
@@ -225,74 +205,32 @@ public class JudaCalendar implements Calendar {
    * CalendarSync.CalendarItem)
    */
   public String modify (CalendarItem item) {
-    logger.trace("Entering modify");
-
-    boolean alreadyExists = new File(updateFileName).exists();
-    String calendarItemID= String.format ("%d", ++maxID);
-
-    try {
-      CSVWriter csvUpdateFileWriter = new CSVWriter (new FileWriter(updateFileName, true), ';');
-
-      if (! alreadyExists)
-        csvUpdateFileWriter.writeNext (createHeader());
-
-      csvUpdateFileWriter.writeNext (createRecord(item, calendarItemID));
-      csvUpdateFileWriter.close();
-    } catch (IOException e) {
-      logger.error ("Error writing judaDatabase", e);
-      System.exit (1);
+    logger.trace("Entering modify");    
+    // store recordnumber to avoid side effects
+    int recordNumber = judaDatabase.getCurrentRecordNumber ();
+    
+    // Search for item with same ID
+    JudaItem judaItem = (JudaItem) getById (item.getID ());
+    if (null != judaItem) {
+      // change judaItem with item
+      judaItem.modify(judaDatabase, item);
+    } else {
+      // add item to database
+      judaItem = new JudaItem(judaDatabase, item);
     }
 
+    // reset database to recordnumber to avoid side effects
+    try {
+      judaDatabase.gotoRecord (recordNumber);
+    } catch (xBaseJException e) {
+      logger.error ("Error resetting database to recordnumber : " + recordNumber);
+      logger.info (e);
+    } catch (IOException e) {
+      logger.error ("Error resetting database do recordnumber : " + recordNumber);
+      logger.info (e);
+    }    
     logger.trace("Exiting modify");
-    return calendarItemID;
-  }
-
-
-  /**
-   * 
-   * Create from and {@link CalendarItem} an array of strings with the most critical values
-   * 
-   * @return array of strings of crucial fields
-   * 
-   */
-  private String[] createRecord (CalendarItem item, String itemID) {
-    logger.trace ("Entering createHeader");
-    String[] record = new String[6];
-
-    // Record consist of AGUSERNS AGOMSCH AGDATUM AGBCODC AGECODC AGUNIQID
-    record[0]=username;
-    record[1]=item.getSummary ();
-
-    java.util.Calendar startDate = item.getStartDate ();
-    java.util.Calendar endDate = item.getEndDate ();
-
-    SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yy");   
-    record[2]=dateFormat.format(startDate);
-    dateFormat = new SimpleDateFormat("yyyyMMddhhmm");
-    record[3]=dateFormat.format (startDate);
-    record[4]=dateFormat.format (endDate);
-    record[5]=itemID;
-
-    logger.trace("Exiting createHeader");
-    return record;
-  }
-
-  /**
-   * Create an array of strings with the names of the most critical values of an {@link CalendarItem}
-   */
-  private String[] createHeader () {
-    logger.trace ("Entering createHeader");
-    String[] header = new String[6];
-
-    header[0]="AGUSERNS";
-    header[1]="AGOMSCH";
-    header[2]="AGDATUM";
-    header[3]="AGBCODC";
-    header[4]="AGECODC";
-    header[5]="AGCODE";
-
-    logger.trace("Exiting createHeader");
-    return header;
+    return judaItem.getID ();
   }
  
 }

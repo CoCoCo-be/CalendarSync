@@ -59,7 +59,7 @@ public class JudaItemTest extends TestCase {
    * Test method for {@link be.CoCoCo.CalendarSync.JudaItem#getID()}.
    */
   public final void testGetID () {
-    assertEquals ("JudaItem1", judaItem1.getID ());
+    assertEquals ("1@CoCoCo.be", judaItem1.getID ());
     assertEquals ("2@CoCoCo.be", judaItem2.getID ());
   }
 
@@ -67,7 +67,7 @@ public class JudaItemTest extends TestCase {
    * Test method for {@link be.CoCoCo.CalendarSync.JudaItem#isNewer(be.CoCoCo.CalendarSync.CalendarItem)}.
    */
   public final void testIsNewer () {
-    assertTrue (judaItem2.isNewer (judaItem1));
+    assertTrue (judaItem1.isNewer (judaItem2));
   }
 
   /**
@@ -76,7 +76,7 @@ public class JudaItemTest extends TestCase {
   public final void testLastModified () {
     java.util.Calendar checkDate = java.util.Calendar.getInstance ();
     checkDate.clear ();
-    checkDate.set (2014, 0, 17);
+    checkDate.set (1999, 8, 17);
     assertTrue (0 == judaItem1.lastModified ().compareTo (checkDate));
   }
 
@@ -112,7 +112,7 @@ public class JudaItemTest extends TestCase {
    * Test method for {@link be.CoCoCo.CalendarSync.JudaItem#getSummary()}.
    */
   public final void testGetSummary () {
-    assertEquals ("1999/0111-1 - VREDEGERECHT", judaItem1.getSummary ());
+    assertEquals ("1999/0111-1 - Vredegerecht", judaItem1.getSummary ());
     assertEquals ("1999/0111-0 - AF - Bespreking (elders) :", judaItem2.getSummary ());
   }
 
