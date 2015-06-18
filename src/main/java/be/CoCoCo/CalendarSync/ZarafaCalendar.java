@@ -40,6 +40,9 @@ import org.apache.log4j.Logger;
  */
 public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
 
+  // Define log4j Logger
+  static Logger logger = Logger.getLogger (ZarafaCalendar.class);
+
   // Fields
   private Integer     lookForward;
   private Integer     lookBack;
@@ -50,9 +53,6 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
   private Filter      filter;
   private String      outDir   = null;
   private Iterator<?> calendarIterator;
-
-  // Define log4j Logger
-  static Logger       logger   = Logger.getLogger (ZarafaCalendar.class);
 
   /**
    * Constructor with only properties containing urlStrin, password, username
@@ -169,8 +169,7 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
     } catch (MalformedURLException e) {
       logger.error ("Error occured during opening of calendar : " + url);
       logger.info (e);
-      logger.error ("Exit program");
-      System.exit (3);
+      throw new RuntimeException ("Zarafa calendar error see logfiles");
     }
 
     // Create authentication
@@ -189,11 +188,11 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
     } catch (IOException e) {
       logger.error ("Error reading url : " + url);
       logger.info (e);
-      System.exit (2);
+      throw new RuntimeException ("Can't read calendar " + url); 
     } catch (ParserException e) {
       logger.error ("Error parsing calendar items from url : " + url);
       logger.info (e);
-      System.exit (2);
+      throw new RuntimeException ("Can't read calendar " + url);
     }
 
     // Set the period filter
@@ -226,23 +225,29 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
     if (null != calendarIterator) calendarIterator.remove ();
     if (null != calendar && 1 <= calendar.getComponents ().size ()) {
       // Local variables
-      OutputStream out = null;
       CalendarOutputter outputter = new CalendarOutputter ();
       CompatibilityHints.setHintEnabled ("ical4j.parsing.relaxed", true);
 
       // Write the calendar to file
+      OutputStream out = null;
       try {
         out = new FileOutputStream (fileName);
         outputter.output (calendar, out);
-        out.close ();
       } catch (IOException e) {
         logger.error ("Error writing to file : " + fileName);
         logger.info (e);
-        System.exit (2);
+        throw new RuntimeException ("Not synced to zarafa");
       } catch (ValidationException e) {
         logger.error ("Error writing calendar items to file : " + fileName);
         logger.info (e);
-        System.exit (2);
+        throw new RuntimeException ("Not synced to zarafa");
+      } finally {
+        try {
+          if ( null != out) out.close();
+        } catch ( IOException e) {
+          logger.error ("Error writing calendar items to file : " + fileName);
+          logger.info (e);
+        }
       }
     }
     logger.trace ("Exiting Close");
@@ -270,7 +275,7 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
     // Remove item if already in Calendar
     CalendarItem existingItem = getById (uID);
     if (null != existingItem) {
-      calendar.getComponents ().remove (((ZarafaItem) existingItem).GetComponent ());
+      calendar.getComponents ().remove (((ZarafaItem) existingItem).getComponent ());
     }
 
     // Create new event
@@ -316,7 +321,7 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
 //    properties.add (new DtStamp ());
 
 //    calendar.getComponents ().add (newEvent);
-    calendar.getComponents ().add (zarafaItem.GetComponent ());
+    calendar.getComponents ().add (zarafaItem.getComponent ());
 
     logger.trace ("Exiting modify");
     return uID;

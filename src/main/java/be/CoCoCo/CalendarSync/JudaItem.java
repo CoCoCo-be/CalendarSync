@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
 
+import org.apache.log4j.Logger;
 import org.xBaseJ.DBF;
 import org.xBaseJ.xBaseJException;
 import org.xBaseJ.fields.CharField;
@@ -24,9 +25,11 @@ import org.xBaseJ.fields.LogicalField;
  * 
  */
 public class JudaItem implements CalendarItem {
+  
+  static Logger logger = Logger.getLogger (JudaItem.class);
 
   // Fields
-  static private DBF database;
+  private DBF        database;
   private String     agID;
   private String     agUser;
   private Calendar   agDate;
@@ -76,8 +79,8 @@ public class JudaItem implements CalendarItem {
     agDate = readCalendarField (dateField, dateFormatYMd);
     agEndTime = readTimeField(endTimeField, timeFormatHHMM);
     agStartTime = readTimeField(startTimeField, timeFormatHHMM);
-    agModified = readCalendarField (changeDateField, dateFormatYMdhms);
-    Calendar agModifiedOld = readCalendarField (oldChangeDateField, dateFormatDMY);
+    agModified = readTimeField (changeDateField, dateFormatYMdhms);
+    Calendar agModifiedOld = readCalendarField (oldChangeDateField, dateFormatYMd);
     agExport = readLogicalField (exportField);
     agTransparant = readLogicalField (temporaryField);
     agKind = readCharField (kindField);
@@ -131,7 +134,7 @@ public class JudaItem implements CalendarItem {
     
     // create summary
     String summary = item.getSummary ();
-    String[] summaryList = summary.split ("-");
+    String[] summaryList = summary.split ("-", 2);
     if (1==summaryList.length) {
       // No dossier number in summarylist so insert default dossier number
       DateFormat formater = new SimpleDateFormat ("yyyy");
@@ -140,14 +143,9 @@ public class JudaItem implements CalendarItem {
       writeCharField(dossierField, defaultDossier);
       writeCharField(summaryField, summaryList[0]);
     } else {
-      // Add all summary fields together and then write dossier number and 
-      // summary to database
+      // Write dossier number and summary to database
       writeCharField(dossierField, summaryList[0]);
-      String summaryString = summaryList[1];
-      for(int i = 2; i < summaryList.length; i++) {
-        summaryString = summaryString + "-" + summaryList[i-1];
-      }
-      writeCharField(summaryField, summaryString); 
+      writeCharField(summaryField, summaryList[1]); 
     }
 
     // create Description
@@ -216,10 +214,10 @@ public class JudaItem implements CalendarItem {
     logger.trace ("getID");
     if (null == agSyncID) {
        logger.trace("Create new ID");
-       agSyncID = agID + "@CoCoCo.be";
+       agSyncID = agID;
        writeCharField(syncField, agSyncID);
     } 
-    return agSyncID;
+    return agSyncID + "@CoCoCo.be";
   }
 
   /*
@@ -334,7 +332,7 @@ public class JudaItem implements CalendarItem {
     Calendar result = null;
     if (null != agCalendar) {
       String dateString = null;
-      dateString = new String (agCalendar.get ()).trim ();
+      dateString = (agCalendar.get ()).trim ();
       if (0 != dateString.length ()) {
         // Parse Calendar
         DateFormat formater = new SimpleDateFormat (format);
@@ -421,7 +419,7 @@ public class JudaItem implements CalendarItem {
     Calendar result = null;
     if (null != agTime) {
       String timeString = null;
-      timeString = new String (agTime.get ()).trim ();
+      timeString = (agTime.get ()).trim ();
       // if timeString is "99:99" it is a full day event
       if (! timeString.equals ("99:99") &&
           (0 != timeString.length ())) {
@@ -480,7 +478,7 @@ public class JudaItem implements CalendarItem {
     }
 
     String result = null;
-    if (null != agField) result = new String (agField.get ()).trim ();
+    if (null != agField) result = (agField.get ()).trim ();
     logger.trace ("Exiting readField");
     return result;
   }
@@ -529,24 +527,24 @@ public class JudaItem implements CalendarItem {
    *          the name of the field
    * @return Value of the field
    */
-  private boolean readLogicalField (String fieldName) {
+  private Boolean readLogicalField (String fieldName) {
 
     logger.trace ("Entering readLogicalField");
 
+    Boolean result = null;
     LogicalField agField = null;
     try {
       agField = (LogicalField) database.getField (fieldName);
     } catch (ArrayIndexOutOfBoundsException e) {
       logger.error ("Array index out of bound");
       logger.info (e);
-      agField = null;
+      return result;
     } catch (xBaseJException e) {
       logger.error ("Error reading field summary");
       logger.info (e);
-      agField = null;
+      return result;
     }
 
-    Boolean result = null;
     if (null != agField) result = agField.getBoolean ();
     logger.trace ("Exiting readField");
     return result;
@@ -560,6 +558,7 @@ public class JudaItem implements CalendarItem {
    *        value
    *          the boolean value
    */
+  @SuppressWarnings ("unused")
   private void writeLogicalField (String fieldName, Boolean value) {
 
     logger.trace ("Entering writeLogicalField");
@@ -662,19 +661,14 @@ public class JudaItem implements CalendarItem {
     
     // change summary
     String summary = item.getSummary ();
-    String[] summaryList = summary.split ("-");
+    String[] summaryList = summary.split ("-", 2);
     if (1==summaryList.length) {
       // No dossier number in summarylist so leave unchanged
       writeCharField(summaryField, summaryList[0]);
     } else {
-      // Add all summary fields together and then write dossier number and 
-      // summary to database
+      // Write dossier number and summary to database
       writeCharField(dossierField, summaryList[0]);
-      String summaryString = summaryList[1];
-      for(int i = 2; i < summaryList.length; i++) {
-        summaryString = summaryString + "-" + summaryList[i-1];
-      }
-      writeCharField(summaryField, summaryString); 
+      writeCharField(summaryField, summaryList[1]); 
     }
 
     // change Description

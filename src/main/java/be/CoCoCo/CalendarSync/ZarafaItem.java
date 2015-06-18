@@ -7,6 +7,8 @@ package be.CoCoCo.CalendarSync;
 
 import java.util.Calendar;
 
+import org.apache.log4j.Logger;
+
 import net.fortuna.ical4j.model.Component;
 import net.fortuna.ical4j.model.Date;
 import net.fortuna.ical4j.model.DateTime;
@@ -28,6 +30,8 @@ import net.fortuna.ical4j.model.property.Uid;
  * 
  */
 public class ZarafaItem implements CalendarItem {
+
+  static Logger logger = Logger.getLogger (ZarafaItem.class);
 
   private Component component = null;
 
@@ -154,7 +158,7 @@ public class ZarafaItem implements CalendarItem {
    * 
    * @return {@link Component}
    */
-  public Component GetComponent () {
+  public Component getComponent () {
     return component;
   }
 
@@ -230,7 +234,7 @@ public class ZarafaItem implements CalendarItem {
       return false;
     }
     ZarafaItem item = (ZarafaItem) calendarItem;
-    if (! item.GetComponent ().equals (component)) { logger.debug ("Different component"); return false; }
+    if (! item.getComponent ().equals (component)) { logger.debug ("Different component"); return false; }
     logger.trace ("Exiting equals with true");
     return true;
   }
@@ -240,7 +244,9 @@ public class ZarafaItem implements CalendarItem {
    */
   public String getDescription () {
     logger.trace("Entering getDescription");
-    if (component instanceof VEvent) return ((VEvent) component).getDescription ().getValue ();
+    if (component instanceof VEvent) 
+      if (null != ((VEvent) component).getDescription ())
+        return ((VEvent) component).getDescription ().getValue ();
     return null;
   }
 

@@ -9,6 +9,7 @@ package be.CoCoCo.CalendarSync;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
 import org.xBaseJ.DBF;
 import org.xBaseJ.xBaseJException;
 
@@ -17,6 +18,8 @@ import org.xBaseJ.xBaseJException;
  * 
  */
 public class JudaCalendar implements Calendar {
+
+  static Logger logger = Logger.getLogger (JudaCalendar.class);
 
   // Fields
   private java.util.Calendar startLookWindow = java.util.Calendar.getInstance ();

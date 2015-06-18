@@ -71,11 +71,11 @@ public class ZarafaItemTest extends TestCase {
   }
 
   /**
-   * Test method for {@link be.CoCoCo.CalendarSync.ZarafaItem#GetComponent()}.
+   * Test method for {@link be.CoCoCo.CalendarSync.ZarafaItem#getComponent()}.
    */
   public final void testGetComponent () {
-    assertTrue (testEvent1.equals (testItem1.GetComponent ())) ;
-    assertFalse(testEvent2.equals (testItem1.GetComponent ())) ;
+    assertTrue (testEvent1.equals (testItem1.getComponent ())) ;
+    assertFalse(testEvent2.equals (testItem1.getComponent ())) ;
   }
 
   /**
