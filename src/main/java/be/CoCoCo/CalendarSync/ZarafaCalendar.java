@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -175,8 +176,15 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
     // Create authentication
     String userPassword = username + ":" + password;
     new Base64 ();
-    String encoding = Base64.encodeBase64String (userPassword.getBytes ()).replaceAll (
-        "\r\n", "");
+    String encoding;
+    try {
+      encoding = Base64.encodeBase64String (userPassword.getBytes ("ISO8859_15")).replaceAll (
+          "\r\n", "");
+    } catch (UnsupportedEncodingException e) {
+      logger.error ("Error encoding password");
+      logger.info (e);
+      throw new RuntimeException ("Error encoding password while opening zarafa calendar"); 
+    }
 
     // Read the calendar
     try {

@@ -22,7 +22,7 @@ import be.CoCoCo.CalendarSync.ZarafaCalendar;
 public class CalendarSync {
 
   // Define log4j Logger
-  static Logger logger = Logger.getLogger (ZarafaCalendar.class);
+  static Logger logger = Logger.getLogger (CalendarSync.class);
   private static File propertiesFile = null;
   private static Properties properties;
   private static Calendar calendar1;

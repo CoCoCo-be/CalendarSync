@@ -6,6 +6,7 @@
 package be.CoCoCo.CalendarSync;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -107,7 +108,12 @@ public class JudaItem implements CalendarItem {
     
     if (agID.isEmpty ()) {
       String agIDString = agDossier + judaDatabase.getCurrentRecordNumber ();
-      agID = String.format("%x", new BigInteger(agIDString.getBytes()));
+      try {
+        agID = String.format("%x", new BigInteger(agIDString.getBytes("ISO8859_15")));
+      } catch (UnsupportedEncodingException e) {
+        logger.error ("Error reading agID : " + agIDString);
+        agID = null;
+      }
     }
     
     if (0 == agSyncID.length()) agSyncID=null;

@@ -7,6 +7,7 @@ package be.CoCoCo.CalendarSync;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
@@ -22,12 +23,14 @@ public class JudaCalendar implements Calendar {
   static Logger logger = Logger.getLogger (JudaCalendar.class);
 
   // Fields
-  private java.util.Calendar startLookWindow = java.util.Calendar.getInstance ();
-  private java.util.Calendar endLookWindow   = java.util.Calendar.getInstance ();
-  private String             databaseLocation;
-  private DBF                judaDatabase;
-  private boolean            open;
-  private String             username;
+  private java.util.Calendar  startLookWindow = java.util.Calendar.getInstance ();
+  private java.util.Calendar  endLookWindow   = java.util.Calendar.getInstance ();
+  private ArrayList<JudaItem> calendar = new ArrayList<JudaItem>();
+  private int                 index = 0;
+  private String              databaseLocation;
+  private DBF                 judaDatabase;
+  private boolean             open = false;
+  private String              username;
 
   /**
    * Constructor with lookBackwindow, lookForwardWindow and properties
@@ -43,6 +46,21 @@ public class JudaCalendar implements Calendar {
     endLookWindow.add (java.util.Calendar.DAY_OF_YEAR, lookForwardWindow);
     databaseLocation = properties.getProperty ("juda.calendar.database");
     username = properties.getProperty ("juda.calendar.username");
+  }
+
+  /**
+   * reads the JudaCalendar and caches the items in the calendar field;
+   */
+  private void readCalendar () {
+    logger.trace ("Entering readCalendar");
+    
+    JudaItem calendarItem = getFirstItem();
+    while (null != calendarItem) {
+      calendar.add (calendarItem);
+      calendarItem= getNextItem();
+    }
+
+    logger.trace("Leaving readCalendar");
   }
 
   /**
@@ -66,20 +84,10 @@ public class JudaCalendar implements Calendar {
   }
 
   /*
-   * (non-Javadoc)
-   * 
-   * @see be.CoCoCo.CalendarSync.Calendar#getFirst()
+   * Get the first valid judaItem from the database file
    */
-  public CalendarItem getFirst () {
+  private JudaItem getFirstItem () {
     logger.trace ("Entering getFirst");
-
-    if (!open) try {
-      open ();
-    } catch (CalendarException e) {
-      logger.warn ("CalendarException thrown", e);
-      logger.trace ("Exiting Reset");
-      return null;
-    }
 
     try {
       judaDatabase.startTop ();
@@ -93,23 +101,14 @@ public class JudaCalendar implements Calendar {
       return null;
     }
     logger.trace ("Exiting Reset");
-    return getNext ();
+    return getNextItem ();
   }
 
   /*
-   * (non-Javadoc)
-   * 
-   * @see be.CoCoCo.CalendarSync.Calendar#getNext()
+   * Get the next valid judaItem from the database file
    */
-  public CalendarItem getNext () {
+  private JudaItem getNextItem () {
     logger.trace ("Entering getNext");
-    if (!open) try {
-      open ();
-    } catch (CalendarException e) {
-      logger.warn ("Can't open database", e);
-      logger.trace ("Exiting getNext");
-      return null;
-    }
 
     /**
      * Find the next agenda item within the asked window
@@ -180,6 +179,7 @@ public class JudaCalendar implements Calendar {
       logger.info (e);
       throw new CalendarException ("Error opening Juda Agenda Database");
     }
+    readCalendar();
     this.open = true;
     logger.trace ("Exiting open");
   }
@@ -234,6 +234,22 @@ public class JudaCalendar implements Calendar {
     }    
     logger.trace("Exiting modify");
     return judaItem.getID ();
+  }
+
+  /* (non-Javadoc)
+   * @see be.CoCoCo.CalendarSync.Calendar#getFirst()
+   */
+  public CalendarItem getFirst () {
+    index = 0;
+    return getNext();
+  }
+
+  /* (non-Javadoc)
+   * @see be.CoCoCo.CalendarSync.Calendar#getNext()
+   */
+  public CalendarItem getNext () {
+    if (index < calendar.size ()) return calendar.get(index++) ;
+    return null;
   }
  
 }
