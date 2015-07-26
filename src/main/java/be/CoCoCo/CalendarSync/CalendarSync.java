@@ -19,8 +19,11 @@ import be.CoCoCo.CalendarSync.ZarafaCalendar;
  * @author Kris Cox
  *
  */
-public class CalendarSync {
-
+class CalendarSync {
+  
+  // mapping database
+  private static final MappingDatabase mapping = new MappingDatabase();
+  
   // Define log4j Logger
   static Logger logger = Logger.getLogger (CalendarSync.class);
   private static File propertiesFile = null;
@@ -118,11 +121,15 @@ public class CalendarSync {
     CalendarItem targetItem, sourceItem = calendar1.getFirst ();
     
     while (null != sourceItem) {
-      String sourceID = sourceItem.getID ();
+      String targetID, sourceID = sourceItem.getID ();
       targetItem = calendar2.getById (sourceID);
+      if (null == targetItem) {
+         targetID = mapping.getMapping (sourceID);
+         targetItem = calendar2.getById (targetID);
+      }
       if (null == targetItem || sourceItem.isNewer (targetItem)) {
         logger.trace ("CalendarItem " + sourceItem.getID () + " added te other Calendar");
-        calendar2.modify (sourceItem);
+        calendar2.modify (sourceItem, mapping);
       }
       sourceItem = calendar1.getNext ();
     }
@@ -130,11 +137,15 @@ public class CalendarSync {
     sourceItem = calendar2.getFirst ();
     
     while (null != sourceItem) {
-      String sourceID = sourceItem.getID ();
+      String targetID, sourceID = sourceItem.getID ();
       targetItem = calendar1.getById (sourceID);
+      if (null == targetItem) {
+         targetID = mapping.getMapping (sourceID);
+         targetItem = calendar1.getById (targetID);
+      }
       if (null == targetItem || sourceItem.isNewer (targetItem)) {
         logger.trace ("CalendarItem " + sourceItem.getID () + " added te other Calendar");
-        calendar2.modify (sourceItem);
+        calendar1.modify (sourceItem, mapping);
       }
       sourceItem = calendar2.getNext ();
     }
@@ -150,6 +161,7 @@ public class CalendarSync {
     try {
       calendar1.close ();
       calendar2.close ();
+      mapping.close ();
     } catch (CalendarException e) {
       logger.error ("Error Closing calendars. Synchronisation may be failed");
       logger.info (e);

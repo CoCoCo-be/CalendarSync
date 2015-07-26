@@ -38,7 +38,11 @@
     	<groupId>net.sf.opencsv</groupId>
     	<artifactId>opencsv</artifactId>
     </dependency>
-  </dependencies>
+    <dependency>
+    	<groupId>org.hibernate</groupId>
+    	<artifactId>hibernate-core</artifactId>
+    </dependency>
+	</dependencies>
   <description>Synchronize two calendars</description>
   <organization>
   	<name>CoCoCo bvba</name>
@@ -75,6 +79,16 @@
   			<groupId>org.xBaseJ</groupId>
   			<artifactId>xbasej</artifactId>
   			<version>20091203</version>
+  		</dependency>
+  		<dependency>
+  			<groupId>org.hibernate</groupId>
+  			<artifactId>hibernate</artifactId>
+  			<version>3.6.0.Beta2</version>
+  		</dependency>
+  		<dependency>
+  			<groupId>org.hibernate</groupId>
+  			<artifactId>hibernate-core</artifactId>
+  			<version>4.3.8.Final</version>
   		</dependency>
   	</dependencies>
   </dependencyManagement>

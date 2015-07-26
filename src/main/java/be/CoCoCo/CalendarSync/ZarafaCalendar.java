@@ -39,7 +39,7 @@ import org.apache.log4j.Logger;
  * @author Kris Cox
  * 
  */
-public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
+class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
 
   // Define log4j Logger
   static Logger logger = Logger.getLogger (ZarafaCalendar.class);
@@ -53,7 +53,7 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
   private Calendar    calendar = null;
   private Filter      filter;
   private String      outDir   = null;
-  private Iterator<?> calendarIterator;
+  private Iterator<Component> calendarIterator;
 
   /**
    * Constructor with only properties containing urlStrin, password, username
@@ -97,10 +97,10 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
    * 
    * @see be.CoCoCo.CalendarSync.Calendar#getFirst()
    */
+  @SuppressWarnings ("unchecked")
   public CalendarItem getFirst () {
     logger.trace ("Entering reset");
 
-    if (null != calendarIterator) calendarIterator.remove ();
     if (null == calendar) {
       calendarIterator = null;
       return null;
@@ -123,7 +123,7 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
     }
 
     if (calendarIterator.hasNext ()) {
-      Component component = (Component) calendarIterator.next ();
+      Component component = calendarIterator.next ();
       if (component instanceof VEvent) {
         logger.trace ("Exiting getNext");
         return new ZarafaItem (component);
@@ -225,12 +225,13 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
    * 
    * @see be.CoCoCo.CalendarSync.Calendar#close()
    */
+  @SuppressWarnings ("unchecked")
   public void close () throws CalendarException {
     logger.trace ("Entering close");
 
     String fileName = outDir + "/" + username + ".ics";
 
-    if (null != calendarIterator) calendarIterator.remove ();
+    if (null != calendarIterator) calendarIterator = filter.filter (calendar.getComponents ()).iterator (); 
     if (null != calendar && 1 <= calendar.getComponents ().size ()) {
       // Local variables
       CalendarOutputter outputter = new CalendarOutputter ();
@@ -268,7 +269,7 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
    * @see be.CoCoCo.CalendarSync.Calendar#modify(be.CoCoCo.
    * CalendarSync.CalendarItem)
    */
-  public String modify (CalendarItem item) {
+  public String modify (CalendarItem item, MappingDatabase mapping) {
     logger.trace ("Entering modify");
 //    Boolean lastModified = false;
     String uID = item.getID ();
@@ -281,54 +282,21 @@ public class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
     }
 
     // Remove item if already in Calendar
+    Iterator<Component> keepIterator = calendarIterator;
+    calendarIterator = null;
     CalendarItem existingItem = getById (uID);
     if (null != existingItem) {
       calendar.getComponents ().remove (((ZarafaItem) existingItem).getComponent ());
+    } else {
+      String newUID = mapping.getMapping (uID);
+      existingItem = getById (newUID);
+      if (null != existingItem)
+        calendar.getComponents ().remove (((ZarafaItem) existingItem).getComponent ());
     }
+    calendarIterator = keepIterator;
 
     // Create new event
     ZarafaItem zarafaItem = new ZarafaItem (item);
-//    VEvent newEvent = null;
-//    java.util.Calendar startDate = item.getStartDate ();
-//    java.util.Calendar endDate = item.getEndDate ();
-//
-//    String summary = item.getSummary ();
-//    
-//    if (null != startDate) {
-//      if (null != endDate) {
-//        DateTime start = new DateTime(startDate.getTime ());
-//        DateTime end = new DateTime(endDate.getTime ());
-//        newEvent = new VEvent(start, end, summary);
-//      } else {
-//        Date start = new Date (startDate.getTime());
-//        newEvent = new VEvent (start, summary);
-//      }
-//    }
-//    
-//    PropertyList properties = newEvent.getProperties ();
-//
-//    java.util.Calendar modified = item.lastModified ();
-//    if (null != modified) {
-//      DateTime modifiedDT = new DateTime (modified.getTime ());
-//      LastModified lastModifiedDate = new LastModified (modifiedDT);
-//      properties.add (lastModifiedDate);
-//      lastModified = true;
-//    }
-//
-//    String uidString = item.getID ();
-//    if (null != uidString) {
-//      properties.add (new Uid (uidString));
-//    }
-//
-//     add modified date
-//    java.util.Calendar now = java.util.Calendar.getInstance ();
-//    DateTime nowDate = new DateTime (now.getTime ());
-//    if (!lastModified) {
-//      properties.add (new LastModified (nowDate));
-//    }
-//    properties.add (new DtStamp ());
-
-//    calendar.getComponents ().add (newEvent);
     calendar.getComponents ().add (zarafaItem.getComponent ());
 
     logger.trace ("Exiting modify");

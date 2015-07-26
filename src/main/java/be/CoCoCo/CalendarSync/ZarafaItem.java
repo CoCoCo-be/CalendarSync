@@ -29,7 +29,7 @@ import net.fortuna.ical4j.model.property.Uid;
  * @author Kris Cox
  * 
  */
-public class ZarafaItem implements CalendarItem {
+class ZarafaItem implements CalendarItem {
 
   static Logger logger = Logger.getLogger (ZarafaItem.class);
 
@@ -219,8 +219,12 @@ public class ZarafaItem implements CalendarItem {
    * @see be.CoCoCo.CalendarSync.CalendarItem#getSummary()
    */
   public String getSummary () {
-    if (component instanceof VEvent) return ((VEvent) component).getSummary ()
-        .toString ().replaceFirst ("SUMMARY:", "").replaceAll ("[\r\n]*", "");
+    if (component instanceof VEvent) {
+      Summary summary = ((VEvent) component).getSummary ();
+      String summaryText = summary.getValue ();
+      return summaryText.replaceFirst ("SUMMARY:", "").replaceAll ("[\r\n]*", "");
+    }
+        
     return null;
   }
 

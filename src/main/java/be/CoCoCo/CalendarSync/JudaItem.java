@@ -6,8 +6,6 @@
 package be.CoCoCo.CalendarSync;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -25,7 +23,7 @@ import org.xBaseJ.fields.LogicalField;
  * @author Kris Cox
  * 
  */
-public class JudaItem implements CalendarItem {
+class JudaItem implements CalendarItem {
   
   static Logger logger = Logger.getLogger (JudaItem.class);
 
@@ -46,20 +44,20 @@ public class JudaItem implements CalendarItem {
   private boolean    agExport;
   private boolean    agTransparant;
 
-  static String  idField         = "AGCODE";
-  static String  dateField       = "AGDATUM";
-  static String  endTimeField    = "AGETIJD";
-  static String  startTimeField  = "AGBTIJD";
-  static String  changeDateField = "AGDATTIJD";    // datefield
-  static String  oldChangeDateField = "AGCHADAT";    // datefield
-  static String  summaryField    = "AGSRTNRN";
-  static String  kindField       = "AGSRTNR";
-  static String  descriptionField= "AGOMSCH";
-  static String  dossierField    = "AGDOSSIER";
-  static String  userField       = "AGUSERNS";
-  static String  exportField     = "AGEXPORT";
-  static String  syncField       = "AGZARAFA";
-  static String  temporaryField  = "AGVOORL";
+  static String  idField         = "AGCODE";      // AGCODE,C,10
+  static String  dateField       = "AGDATUM";     // AGDATUM,D
+  static String  endTimeField    = "AGETIJD";     // AGETIJD,C,5
+  static String  startTimeField  = "AGBTIJD";     // AGBTIJD,C,5
+  static String  changeDateField = "AGDATTIJD";   // AGDATTIJD,C,14
+  static String  oldChangeDateField = "AGCHADAT"; // AGCHADAT,D
+  static String  summaryField    = "AGSRTNRN";    // AGSRTNRN,C,100
+  static String  kindField       = "AGSRTNR";     // AGSRTNR,C,7
+  static String  descriptionField= "AGOMSCH";     // AGOMSCH,C,100
+  static String  dossierField    = "AGDOSSIER";   // AGDOSSIER,C,12
+  static String  userField       = "AGUSERNS";    // AGUSERNS,C,40
+  static String  exportField     = "AGEXPORT";    // AGEXPORT,L
+  static String  syncField       = "AGZARAFA";    // AGZARAFA,C,10
+  static String  temporaryField  = "AGVOORL";     // AGVOORL,L
 
   static String  dateFormatYMdhm = "yyyyMMddhhmm";
   static String  dateFormatYMdhms = "yyyyMMddhhmmss";
@@ -106,17 +104,12 @@ public class JudaItem implements CalendarItem {
       }
     }
     
-    if (agID.isEmpty ()) {
-      String agIDString = agDossier + judaDatabase.getCurrentRecordNumber ();
-      try {
-        agID = String.format("%x", new BigInteger(agIDString.getBytes("ISO8859_15")));
-      } catch (UnsupportedEncodingException e) {
-        logger.error ("Error reading agID : " + agIDString);
-        agID = null;
-      }
+    if (agSyncID.isEmpty ()) {
+      if (agID.isEmpty ()) 
+        agID = agDossier + judaDatabase.getCurrentRecordNumber ();
+      writeCharField (syncField, agID);
+      agSyncID = agID;
     }
-    
-    if (0 == agSyncID.length()) agSyncID=null;
     
     description = agDescription;
     summary = agDossier + " - " + agSummary;
@@ -126,25 +119,33 @@ public class JudaItem implements CalendarItem {
    * @param databaseLocation
    * @param item
    */
-  public JudaItem (DBF judaDatabase, CalendarItem item) {
+  public JudaItem (DBF judaDatabase, CalendarItem item, MappingDatabase mapping) {
     // create new record
+    
+    //Set database
+    database = judaDatabase;
+    
     // create modified
-    writeTimeField(changeDateField, dateFormatYMdhms, item.lastModified ());
+    agModified = item.lastModified ();
+    writeTimeField(changeDateField, dateFormatYMdhms, agModified);
 
     // create startdate
-    writeCalendarField(startTimeField, timeFormatHHMM, item.getStartDate ());
+    agStartDate = item.getStartDate ();
+    writeTimeField(startTimeField, timeFormatHHMM, agStartDate);
 
     // create enddate
-    if (null != item.getEndDate ())
-      writeCalendarField(endTimeField, timeFormatHHMM, item.getEndDate ());
+    agEndDate = item.getEndDate();
+    if (null != agEndDate) 
+      writeTimeField(endTimeField, timeFormatHHMM, agEndDate);
     
     // create summary
-    String summary = item.getSummary ();
+    summary = item.getSummary ();
     String[] summaryList = summary.split ("-", 2);
     if (1==summaryList.length) {
       // No dossier number in summarylist so insert default dossier number
       DateFormat formater = new SimpleDateFormat ("yyyy");
-      String year = formater.format (Calendar.getInstance ());
+      java.util.Date date = Calendar.getInstance ().getTime ();
+      String year = formater.format (date);
       String defaultDossier = year+"/0001-0";
       writeCharField(dossierField, defaultDossier);
       writeCharField(summaryField, summaryList[0]);
@@ -155,7 +156,9 @@ public class JudaItem implements CalendarItem {
     }
 
     // create Description
-    writeCharField (descriptionField, item.getDescription ());
+    description = item.getDescription ();
+    if (null == description) description = "";
+    writeCharField (descriptionField, description);
     try {
       judaDatabase.write(true);
     } catch (xBaseJException e) {
@@ -164,6 +167,16 @@ public class JudaItem implements CalendarItem {
     } catch (IOException e) {
       logger.error ("Error writing record to database");
       logger.info (e); 
+    }
+    
+    // Create ID
+    agSyncID = item.getID ();
+    if ( 40 > agSyncID.length () ) 
+      writeCharField (syncField, agSyncID);
+    else {
+      String ID = dossierField + judaDatabase.getCurrentRecordNumber ();
+      mapping.addMapping (agSyncID, ID);
+      writeCharField (syncField, ID);
     }
 
   }
@@ -218,11 +231,6 @@ public class JudaItem implements CalendarItem {
    */
   public String getID () {
     logger.trace ("getID");
-    if (null == agSyncID) {
-       logger.trace("Create new ID");
-       agSyncID = agID;
-       writeCharField(syncField, agSyncID);
-    } 
     return agSyncID + "@CoCoCo.be";
   }
 
@@ -455,7 +463,13 @@ public class JudaItem implements CalendarItem {
    * @param value
    */
   private void writeTimeField (String fieldName, String format, Calendar value) {
-    writeCalendarField(fieldName, format, value);
+    // Convert value to string
+    java.util.Date time = value.getTime ();
+    DateFormat formater = new SimpleDateFormat (format);
+    formater.setTimeZone (TimeZone.getTimeZone ("CEST"));
+    String timeString = formater.format (time);
+        
+    writeCharField (fieldName, timeString);
     return;
   }
 
@@ -679,16 +693,6 @@ public class JudaItem implements CalendarItem {
 
     // change Description
     writeCharField (descriptionField, item.getDescription ());
-    
-    try {
-      judaDatabase.write(true);
-    } catch (xBaseJException e) {
-      logger.error ("Error writing record to database");
-      logger.info (e);
-    } catch (IOException e) {
-      logger.error ("Error writing record to database");
-      logger.info (e); 
-    }
     
   }
 

@@ -18,7 +18,7 @@ import org.xBaseJ.xBaseJException;
  * @author Kris Cox
  * 
  */
-public class JudaCalendar implements Calendar {
+class JudaCalendar implements Calendar {
 
   static Logger logger = Logger.getLogger (JudaCalendar.class);
 
@@ -27,9 +27,9 @@ public class JudaCalendar implements Calendar {
   private java.util.Calendar  endLookWindow   = java.util.Calendar.getInstance ();
   private ArrayList<JudaItem> calendar = new ArrayList<JudaItem>();
   private int                 index = 0;
+  private boolean             open = false;
   private String              databaseLocation;
   private DBF                 judaDatabase;
-  private boolean             open = false;
   private String              username;
 
   /**
@@ -166,6 +166,10 @@ public class JudaCalendar implements Calendar {
    */
   public void open () throws CalendarException {
     logger.trace ("Entering open");
+    if (open) {
+      logger.trace ("Exitin open because already open");
+      return;
+    }
     try {
       org.xBaseJ.Util.setxBaseJProperty ("ignoreMissingMDX", "true");
       judaDatabase = new DBF (databaseLocation);
@@ -180,7 +184,6 @@ public class JudaCalendar implements Calendar {
       throw new CalendarException ("Error opening Juda Agenda Database");
     }
     readCalendar();
-    this.open = true;
     logger.trace ("Exiting open");
   }
 
@@ -207,19 +210,35 @@ public class JudaCalendar implements Calendar {
    * @see be.CoCoCo.CalendarSync.Calendar#modify(be.CoCoCo.
    * CalendarSync.CalendarItem)
    */
-  public String modify (CalendarItem item) {
+  public String modify (CalendarItem item, MappingDatabase mapping) {
     logger.trace("Entering modify");    
     // store recordnumber to avoid side effects
     int recordNumber = judaDatabase.getCurrentRecordNumber ();
-    
+
+    // GetID
+    String ID = item.getID();
     // Search for item with same ID
-    JudaItem judaItem = (JudaItem) getById (item.getID ());
+    JudaItem judaItem = (JudaItem) getById (ID);
     if (null != judaItem) {
       // change judaItem with item
       judaItem.modify(judaDatabase, item);
     } else {
-      // add item to database
-      judaItem = new JudaItem(judaDatabase, item);
+      judaItem = (JudaItem) getById (mapping.getMapping (ID));
+      if ( null != judaItem) {
+        judaItem.modify(judaDatabase, item);
+      } else {
+        try {
+          judaDatabase.write(true);
+        } catch (xBaseJException e) {
+          logger.error ("Error writing record to database");
+          logger.info (e);
+        } catch (IOException e) {
+          logger.error ("Error writing record to database");
+          logger.info (e); 
+        }
+        // add item to database
+        judaItem = new JudaItem(judaDatabase, item, mapping);
+      }
     }
 
     // reset database to recordnumber to avoid side effects

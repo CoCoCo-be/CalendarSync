@@ -83,6 +83,6 @@ interface Calendar {
    *          
    * @return The new ID for the calendar item
    */
-  public String modify (CalendarItem item);
+  public String modify (CalendarItem item, MappingDatabase mapping);
 
 }
