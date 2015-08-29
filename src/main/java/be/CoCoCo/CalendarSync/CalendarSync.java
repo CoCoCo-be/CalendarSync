@@ -125,7 +125,8 @@ class CalendarSync {
       targetItem = calendar2.getById (sourceID);
       if (null == targetItem) {
          targetID = mapping.getMapping (sourceID);
-         targetItem = calendar2.getById (targetID);
+         if (null != targetID)
+           targetItem = calendar2.getById (targetID);
       }
       if (null == targetItem || sourceItem.isNewer (targetItem)) {
         logger.trace ("CalendarItem " + sourceItem.getID () + " added te other Calendar");

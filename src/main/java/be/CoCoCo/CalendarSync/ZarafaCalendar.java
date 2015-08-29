@@ -289,7 +289,9 @@ class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
       calendar.getComponents ().remove (((ZarafaItem) existingItem).getComponent ());
     } else {
       String newUID = mapping.getMapping (uID);
-      existingItem = getById (newUID);
+      if (null != newUID)
+        existingItem = getById (newUID);
+      else existingItem = null;
       if (null != existingItem)
         calendar.getComponents ().remove (((ZarafaItem) existingItem).getComponent ());
     }

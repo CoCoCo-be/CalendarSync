@@ -227,7 +227,10 @@ class JudaCalendar implements Calendar {
       if ( null != judaItem) {
         judaItem.modify(judaDatabase, item);
       } else {
+        // clear the current record
         try {
+          for (int i=1; i <= judaDatabase.getFieldCount (); i++)
+            judaDatabase.getField (i).put ("");
           judaDatabase.write(true);
         } catch (xBaseJException e) {
           logger.error ("Error writing record to database");

@@ -108,6 +108,15 @@ class JudaItem implements CalendarItem {
       if (agID.isEmpty ()) 
         agID = agDossier + judaDatabase.getCurrentRecordNumber ();
       writeCharField (syncField, agID);
+      try {
+        database.update(true);
+      } catch (xBaseJException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       agSyncID = agID;
     }
     
@@ -140,27 +149,42 @@ class JudaItem implements CalendarItem {
     
     // create summary
     summary = item.getSummary ();
+    String dossier = null;
     String[] summaryList = summary.split ("-", 2);
     if (1==summaryList.length) {
       // No dossier number in summarylist so insert default dossier number
       DateFormat formater = new SimpleDateFormat ("yyyy");
       java.util.Date date = Calendar.getInstance ().getTime ();
       String year = formater.format (date);
-      String defaultDossier = year+"/0001-0";
-      writeCharField(dossierField, defaultDossier);
-      writeCharField(summaryField, summaryList[0]);
+      dossier = year+"/0001-0";
+      summary = summaryList[0];
+      writeCharField(dossierField, dossier);
+      writeCharField(summaryField, summary);
     } else {
       // Write dossier number and summary to database
-      writeCharField(dossierField, summaryList[0]);
-      writeCharField(summaryField, summaryList[1]); 
+      dossier = summaryList[0];
+      summary = summaryList[1];
+      writeCharField(dossierField, dossier);
+      writeCharField(summaryField, summary); 
     }
 
     // create Description
     description = item.getDescription ();
     if (null == description) description = "";
     writeCharField (descriptionField, description);
+
+    // Create ID
+    agSyncID = item.getID ();
+    if ( 40 > agSyncID.length () ) 
+      writeCharField (syncField, agSyncID);
+    else {
+      String ID = dossier + judaDatabase.getCurrentRecordNumber ();
+      mapping.addMapping (agSyncID, ID);
+      writeCharField (syncField, ID);
+    }
+
     try {
-      judaDatabase.write(true);
+      judaDatabase.update(true);
     } catch (xBaseJException e) {
       logger.error ("Error writing record to database");
       logger.info (e);
@@ -169,16 +193,6 @@ class JudaItem implements CalendarItem {
       logger.info (e); 
     }
     
-    // Create ID
-    agSyncID = item.getID ();
-    if ( 40 > agSyncID.length () ) 
-      writeCharField (syncField, agSyncID);
-    else {
-      String ID = dossierField + judaDatabase.getCurrentRecordNumber ();
-      mapping.addMapping (agSyncID, ID);
-      writeCharField (syncField, ID);
-    }
-
   }
 
   /**
@@ -394,11 +408,7 @@ class JudaItem implements CalendarItem {
     
     try{
       agField.put (dateString);
-      database.update ();
     } catch (xBaseJException e) {
-      logger.error ("Error reading field summary");
-      logger.info (e);
-    } catch (IOException e) {
       logger.error ("Error reading field summary");
       logger.info (e);
     }
@@ -528,12 +538,7 @@ class JudaItem implements CalendarItem {
     if (null == agField) return;
     try {
       agField.put (value);
-      database.update ();
     } catch (xBaseJException e) {
-      logger.error ("Error reading field summary");
-      logger.info (e);
-      return;
-    } catch (IOException e) {
       logger.error ("Error reading field summary");
       logger.info (e);
       return;
@@ -597,16 +602,7 @@ class JudaItem implements CalendarItem {
     }
 
     if (null == agField) return;
-    try{
-      agField.put (value);
-      database.update ();
-    } catch (xBaseJException e) {
-      logger.error ("Error reading field summary");
-      logger.info (e);
-    } catch (IOException e) {
-      logger.error ("Error reading field summary");
-      logger.info (e);
-    }
+    agField.put (value);
     
     logger.trace ("Exiting writeField");
     return;
@@ -673,11 +669,11 @@ class JudaItem implements CalendarItem {
     writeTimeField(changeDateField, dateFormatYMdhms, item.lastModified ());
 
     // change startdate
-    writeCalendarField(startTimeField, timeFormatHHMM, item.getStartDate ());
+    writeTimeField (startTimeField, timeFormatHHMM, item.getStartDate ());
 
     // change enddate
     if (null != item.getEndDate ())
-      writeCalendarField(endTimeField, timeFormatHHMM, item.getEndDate ());
+      writeTimeField(endTimeField, timeFormatHHMM, item.getEndDate ());
     
     // change summary
     String summary = item.getSummary ();
@@ -693,6 +689,8 @@ class JudaItem implements CalendarItem {
 
     // change Description
     writeCharField (descriptionField, item.getDescription ());
+    
+ 
     
   }
 
