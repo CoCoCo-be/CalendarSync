@@ -18,13 +18,12 @@ import org.xBaseJ.xBaseJException;
 import org.xBaseJ.fields.CharField;
 import org.xBaseJ.fields.DateField;
 import org.xBaseJ.fields.LogicalField;
-
 /**
  * @author Kris Cox
  * 
  */
 class JudaItem implements CalendarItem {
-  
+
   static Logger logger = Logger.getLogger (JudaItem.class);
 
   // Fields
@@ -58,13 +57,26 @@ class JudaItem implements CalendarItem {
   static String  exportField     = "AGEXPORT";    // AGEXPORT,L
   static String  syncField       = "AGZARAFA";    // AGZARAFA,C,10
   static String  temporaryField  = "AGVOORL";     // AGVOORL,L
+  static String  beginDateCode   = "AGBCODE";     // AGBCODE,C,19
+  static String  endDateCode     = "AGECODE";     // AGECODE,C,19
+  static String  beginDate       = "AGBCODC";     // AGBCODC,C,12
+  static String  endDate         = "AGECODC";     // AGECODC,C,12
 
-  static String  dateFormatYMdhm = "yyyyMMddhhmm";
-  static String  dateFormatYMdhms = "yyyyMMddhhmmss";
+  /*Alarm values not implemented yet
+   * AGALARM,L
+   * AGALDAG,D
+   * AGALUUR,C,5
+   * AGALCODE,C,19
+   */
+
+  static String  dateFormatYMdhm = "yyyyMMddHHmm" ;
+  static String  dateFormatYMdhms = "yyyyMMddHHmmss";
+  static String  dateFormat1YMdhm = "'1'yyyyMMddHHmm" ;
+  static String  dateFormat1YMdhms = "'1'yyyyMMddHHmmss";
   static String  dateFormatYMd   = "yyyyMMdd";
-  static String  dateFormatMDY   = "MM/dd/yy";
-  static String  dateFormatDMY   = "dd/MM/yy";
-  static String  timeFormatHHMM  = "hh:mm";
+  static String  dateFormatMDY   = "MM'/'dd'/'yy";
+  static String  dateFormatDMY   = "dd'/'MM'/'yy";
+  static String  timeFormatHHMM  = "HH':'mm";
 
   /**
    * constructor of an judaItem
@@ -76,9 +88,9 @@ class JudaItem implements CalendarItem {
     database = judaDatabase;
     agID = readCharField (idField);
     agDate = readCalendarField (dateField, dateFormatYMd);
-    agEndTime = readTimeField(endTimeField, timeFormatHHMM);
-    agStartTime = readTimeField(startTimeField, timeFormatHHMM);
-    agModified = readTimeField (changeDateField, dateFormatYMdhms);
+    agEndTime = readTimeField (endTimeField, timeFormatHHMM);
+    agStartTime = readTimeField (startTimeField, timeFormatHHMM);
+    agModified = readDateField (changeDateField, dateFormatYMdhms);
     Calendar agModifiedOld = readCalendarField (oldChangeDateField, dateFormatYMd);
     agExport = readLogicalField (exportField);
     agTransparant = readLogicalField (temporaryField);
@@ -90,7 +102,7 @@ class JudaItem implements CalendarItem {
     agSyncID = readCharField (syncField);
 
     if (null == agModified) agModified = agModifiedOld;
-    
+
     if (! (null == agDate)) {
       if ((null == agStartTime) || (null == agEndTime)) {
         agEndDate = null;
@@ -103,7 +115,7 @@ class JudaItem implements CalendarItem {
         agEndDate.setTimeInMillis (agDate.getTimeInMillis () + agEndTime.getTimeInMillis ());
       }
     }
-    
+
     if (agSyncID.isEmpty ()) {
       if (agID.isEmpty ()) 
         agID = agDossier + judaDatabase.getCurrentRecordNumber ();
@@ -111,15 +123,15 @@ class JudaItem implements CalendarItem {
       try {
         database.update(true);
       } catch (xBaseJException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        logger.error ("Error writing JudaItem on update");
+        logger.info (e);
       } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        logger.error ("Error writing JudaItem on update, IO exception");
+        logger.info (e);
       }
       agSyncID = agID;
     }
-    
+
     description = agDescription;
     summary = agDossier + " - " + agSummary;
   }
@@ -128,25 +140,37 @@ class JudaItem implements CalendarItem {
    * @param databaseLocation
    * @param item
    */
-  public JudaItem (DBF judaDatabase, CalendarItem item, MappingDatabase mapping) {
+  public JudaItem (DBF judaDatabase, CalendarItem item) {
     // create new record
+    Boolean allDay = item.isTransparent ();
+    TimeZone tz = TimeZone.getTimeZone ("Europe/Brussels");
     
     //Set database
     database = judaDatabase;
-    
+
     // create modified
     agModified = item.lastModified ();
-    writeTimeField(changeDateField, dateFormatYMdhms, agModified);
+    agModified.setTimeZone (tz);
+    writeDateField(changeDateField, dateFormatYMdhms, agModified, false);
+    writeCalendarField (oldChangeDateField, dateFormatDMY, agModified);
 
     // create startdate
     agStartDate = item.getStartDate ();
+    agStartDate.setTimeZone (tz);
     writeTimeField(startTimeField, timeFormatHHMM, agStartDate);
+    writeCalendarField(dateField, dateFormatDMY, agStartDate);
+    writeDateField(beginDateCode,dateFormat1YMdhm, agStartDate, allDay);
+    writeDateField(beginDate, dateFormatYMdhm, agStartDate, allDay);
 
     // create enddate
     agEndDate = item.getEndDate();
-    if (null != agEndDate) 
+    if (null != agEndDate) {
+      agEndDate.setTimeZone (tz);
       writeTimeField(endTimeField, timeFormatHHMM, agEndDate);
-    
+      writeDateField(endDateCode, dateFormat1YMdhm, agEndDate, allDay);
+      writeDateField(endDate, dateFormatYMdhm, agEndDate, allDay);
+    }
+
     // create summary
     summary = item.getSummary ();
     String dossier = null;
@@ -175,13 +199,9 @@ class JudaItem implements CalendarItem {
 
     // Create ID
     agSyncID = item.getID ();
-    if ( 40 > agSyncID.length () ) 
-      writeCharField (syncField, agSyncID);
-    else {
-      String ID = dossier + judaDatabase.getCurrentRecordNumber ();
-      mapping.addMapping (agSyncID, ID);
-      writeCharField (syncField, ID);
-    }
+    if ( 40 <= agSyncID.length () ) 
+      agSyncID = dossier + judaDatabase.getCurrentRecordNumber ();
+    writeCharField (syncField, agSyncID);
 
     try {
       judaDatabase.update(true);
@@ -192,7 +212,7 @@ class JudaItem implements CalendarItem {
       logger.error ("Error writing record to database");
       logger.info (e); 
     }
-    
+
   }
 
   /**
@@ -237,7 +257,7 @@ class JudaItem implements CalendarItem {
         (null == agModified ) && (null == agStartDate) && // (null == agEndCalendar) &&
         (null == description) && (false == agExport)));
   }
-  
+
   /*
    * (non-Javadoc)
    * 
@@ -333,7 +353,7 @@ class JudaItem implements CalendarItem {
 
     return agUser;
   }
-  
+
   /**
    * Reads a data from a juda Database into Calendar value
    * 
@@ -403,13 +423,11 @@ class JudaItem implements CalendarItem {
     }
 
     if (null == agField) return;
-    DateFormat formater = new SimpleDateFormat (format);
-    String dateString = formater.format (value);
-    
+
     try{
-      agField.put (dateString);
+      agField.put (value);
     } catch (xBaseJException e) {
-      logger.error ("Error reading field summary");
+      logger.error ("Error writing date");
       logger.info (e);
     }
 
@@ -426,7 +444,7 @@ class JudaItem implements CalendarItem {
    */
   private Calendar readTimeField (String fieldName, String format) {
     logger.trace ("Entering readTimeField");
-    
+
     CharField agTime = null;
     try {
       agTime = (CharField) database.getField (fieldName);
@@ -451,8 +469,9 @@ class JudaItem implements CalendarItem {
         DateFormat formater = new SimpleDateFormat(format);
         formater.setTimeZone (TimeZone.getTimeZone ("CEST"));
         try {
+          java.util.Date tempDate=formater.parse(timeString);
           result = Calendar.getInstance ();
-          result.setTimeInMillis(formater.parse (timeString).getTime ());
+          result.setTime (tempDate);
         } catch (ParseException e) {
           logger.error ("Error parsing date", e);
           logger.info (e);
@@ -464,7 +483,7 @@ class JudaItem implements CalendarItem {
     logger.trace ("Exiting readDataField");
     return result;
   }
-  
+
   /**
    * Writes time field to a juda Database 
    * 
@@ -476,10 +495,83 @@ class JudaItem implements CalendarItem {
     // Convert value to string
     java.util.Date time = value.getTime ();
     DateFormat formater = new SimpleDateFormat (format);
-    formater.setTimeZone (TimeZone.getTimeZone ("CEST"));
+    formater.setTimeZone (TimeZone.getTimeZone ("Europe/Brussels"));
     String timeString = formater.format (time);
-        
+
     writeCharField (fieldName, timeString);
+    return;
+  }
+
+  /**
+   * Reads date field from a juda Database into Calendar value
+   * 
+   * @param fieldName
+   * @param format
+   * @return
+   */
+  private Calendar readDateField (String fieldName, String format) {
+    logger.trace ("Entering readTimeField");
+
+    CharField agDate = null;
+    try {
+      agDate = (CharField) database.getField (fieldName);
+    } catch (ArrayIndexOutOfBoundsException e) {
+      logger.error ("Array index out of bound");
+      logger.info (e);
+      agDate = null;
+    } catch (xBaseJException e) {
+      logger.error ("Error reading field summary");
+      logger.info (e);
+      agDate = null;
+    }
+
+    Calendar result = null;
+    if (null != agDate) {
+      String dateString = null;
+      dateString = (agDate.get ()).trim ();
+      if ( 0 != dateString.length ()) {
+        // if dateString ends on "9999" it is a full day event and we
+        // replace it with 0000
+        if (! dateString.endsWith ("9999")) 
+           dateString.replace ("9999", "0000");
+        // Parse Calendar
+        DateFormat formater = new SimpleDateFormat(format);
+        formater.setTimeZone (TimeZone.getTimeZone ("Europe/Brussels"));
+        try {
+          java.util.Date tempDate=formater.parse(dateString);
+          result = Calendar.getInstance ();
+          result.setTime (tempDate);
+        } catch (ParseException e) {
+          logger.error ("Error parsing date", e);
+          logger.info (e);
+          result = null;
+        }
+      }
+    }
+
+    logger.trace ("Exiting readDataField");
+    return result;
+  }
+
+  /**
+   * Writes time field to a juda Database 
+   * 
+   * @param fieldName
+   * @param format
+   * @param value
+   */
+  private void writeDateField (String fieldName, String format, Calendar value, Boolean allDay) {
+    // Convert value to string
+    java.util.Date date = value.getTime ();
+    DateFormat formater = new SimpleDateFormat (format);
+    formater.setTimeZone (TimeZone.getTimeZone ("Europe/Brussels"));
+    String dateString = formater.format (date);
+    
+    // All day events end on 9999
+    if (allDay) 
+       dateString = dateString.substring(0,dateString.length () - 4) + "9999";
+
+    writeCharField (fieldName, dateString);
     return;
   }
 
@@ -520,7 +612,7 @@ class JudaItem implements CalendarItem {
    */
   private void writeCharField (String fieldName, String value) {
     logger.trace ("Entering writeSyncID");
-    
+
     CharField agField = null;
 
     try {
@@ -544,7 +636,7 @@ class JudaItem implements CalendarItem {
       return;
     }
   }
-  
+
   /**
    * read boolean field from database
    * 
@@ -603,7 +695,7 @@ class JudaItem implements CalendarItem {
 
     if (null == agField) return;
     agField.put (value);
-    
+
     logger.trace ("Exiting writeField");
     return;
   }
@@ -665,16 +757,34 @@ class JudaItem implements CalendarItem {
    * @param judaItem
    */
   protected void modify (DBF judaDatabase, CalendarItem item) {
+    Boolean allDay = item.isTransparent ();
     // change modified
-    writeTimeField(changeDateField, dateFormatYMdhms, item.lastModified ());
+    writeDateField(changeDateField, dateFormatYMdhms, item.lastModified (), false);
+    writeCalendarField (oldChangeDateField, dateFormatDMY, item.lastModified ());
 
     // change startdate
+    writeCalendarField(dateField, dateFormatDMY, item.getStartDate ());
+    if (allDay) {
+      writeCharField(startTimeField, "99:99");
+    } else {
     writeTimeField (startTimeField, timeFormatHHMM, item.getStartDate ());
-
-    // change enddate
-    if (null != item.getEndDate ())
-      writeTimeField(endTimeField, timeFormatHHMM, item.getEndDate ());
+    }
+    writeDateField(beginDateCode,dateFormat1YMdhm, item.getStartDate (), allDay);
+    writeDateField(beginDate, dateFormatYMdhm, item.getStartDate (), allDay);
     
+    // Check if item is allday 
+    if (allDay) {
+      writeCharField (endTimeField, "99:99");
+    } else {
+      if (null != item.getEndDate ())
+        writeTimeField(endTimeField, timeFormatHHMM, item.getEndDate ());
+    }
+    // change enddate
+    if (null != item.getEndDate ()) {
+      writeDateField(endDateCode, dateFormat1YMdhm, item.getEndDate (), allDay);
+      writeDateField(endDate, dateFormatYMdhm, item.getEndDate (), allDay);
+    }
+
     // change summary
     String summary = item.getSummary ();
     String[] summaryList = summary.split ("-", 2);
@@ -688,10 +798,19 @@ class JudaItem implements CalendarItem {
     }
 
     // change Description
-    writeCharField (descriptionField, item.getDescription ());
-    
- 
-    
+    if (null != item.getDescription ())
+      writeCharField (descriptionField, item.getDescription ());
+
+    try {
+      judaDatabase.update (true);
+    } catch (xBaseJException e) {
+      logger.error ("Update of judaitem record failed");
+      logger.info (e);
+    } catch (IOException e) {
+      logger.error ("Update of judaitem record failed with IOexception");
+      logger.info (e);
+    }
+
   }
 
 

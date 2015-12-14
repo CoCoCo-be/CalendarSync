@@ -32,7 +32,7 @@ public class JudaItemTest extends TestCase {
   protected void setUp () throws Exception {
     super.setUp ();
     org.xBaseJ.Util.setxBaseJProperty ("ignoreMissingMDX", "true");
-    DBF judaDatabase = new DBF("src/test/resource/AGENDA.DBF");
+    DBF judaDatabase = new DBF("src/test/resources/AGENDA.DBF");
     judaDatabase.startTop ();
     judaDatabase.read ();
     judaItem1 = new JudaItem(judaDatabase);

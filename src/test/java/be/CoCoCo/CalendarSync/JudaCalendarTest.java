@@ -33,7 +33,7 @@ public class JudaCalendarTest extends TestCase {
   protected void setUp () throws Exception {
     super.setUp ();
     properties = new Properties();
-    properties.setProperty ("juda.calendar.database", "src/test/resource/AGENDA.DBF");
+    properties.setProperty ("juda.calendar.database", "src/test/resources/AGENDA.DBF");
     properties.setProperty ("juda.calendar.updateFileName", "/tmp/test.csv");
     properties.setProperty ("juda.maxID", "10000");    
     properties.setProperty ("juda.calendar.username", "ERICWOUTERS");

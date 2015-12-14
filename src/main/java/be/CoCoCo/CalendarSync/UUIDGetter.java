@@ -8,6 +8,7 @@ package be.CoCoCo.CalendarSync;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -24,6 +25,7 @@ import org.hibernate.service.ServiceRegistry;
  */
 class UUIDGetter {
   
+  static Logger logger = Logger.getLogger (UUIDGetter.class);
   private static SessionFactory factory = createSessionFactory (); 
   private static ServiceRegistry serviceRegistry;
   
@@ -46,6 +48,7 @@ class UUIDGetter {
     try {
       tx = session.beginTransaction ();
       Query query = session.getNamedQuery ("getID");
+      @SuppressWarnings ("rawtypes")
       List results = query.list ();
       if ( null == results.get(0)) 
         id = 1;
@@ -56,8 +59,8 @@ class UUIDGetter {
       tx.commit ();
     } catch (HibernateException e) {
       if (tx!=null) tx.rollback();
-      //TODO catch error
-      e.printStackTrace(); 
+      logger.error ("Error writing UUID");
+      logger.info (e);
       throw new RuntimeException(e.toString ());
     }finally {
       session.close(); 

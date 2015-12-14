@@ -13,6 +13,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.UUID;
@@ -53,6 +54,7 @@ class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
   private Calendar    calendar = null;
   private Filter      filter;
   private String      outDir   = null;
+  private Collection<Component>  filteredComponents = null;
   private Iterator<Component> calendarIterator;
 
   /**
@@ -97,14 +99,13 @@ class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
    * 
    * @see be.CoCoCo.CalendarSync.Calendar#getFirst()
    */
-  @SuppressWarnings ("unchecked")
   public CalendarItem getFirst () {
     logger.trace ("Entering reset");
 
     if (null == calendar) {
       calendarIterator = null;
       return null;
-    } else calendarIterator = filter.filter (calendar.getComponents ()).iterator ();
+    } else calendarIterator = filteredComponents.iterator ();
 
     logger.trace ("Exiting reset");
     return getNext ();
@@ -161,6 +162,7 @@ class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
    * 
    * @see be.CoCoCo.CalendarSync.Calendar#open()
    */
+  @SuppressWarnings ("unchecked")
   public void open () throws CalendarException {
     logger.trace ("Entering open");
     URL url = null;
@@ -215,6 +217,7 @@ class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
     Rule[] rules = new Rule[1];
     rules[0] = new PeriodRule (period);
     filter = new Filter (rules, Filter.MATCH_ALL);
+    filteredComponents = filter.filter (calendar.getComponents ());
 
     logger.trace ("Exiting open");
 
@@ -269,37 +272,38 @@ class ZarafaCalendar implements be.CoCoCo.CalendarSync.Calendar {
    * @see be.CoCoCo.CalendarSync.Calendar#modify(be.CoCoCo.
    * CalendarSync.CalendarItem)
    */
-  public String modify (CalendarItem item, MappingDatabase mapping) {
+  public String modify (CalendarItem item, String ID) {
     logger.trace ("Entering modify");
-//    Boolean lastModified = false;
-    String uID = item.getID ();
-    if (null == uID) {
-      Uid newID = new Uid ();
-      newID.setValue ("CoCoCo-" + UUID.randomUUID ());
-      uID = newID.getValue ();
-    } else {
-      logger.debug ("Uid already existed, updating existing");
-    }
-
-    // Remove item if already in Calendar
+    
+    // To prevent iterator to move, guard it
     Iterator<Component> keepIterator = calendarIterator;
     calendarIterator = null;
-    CalendarItem existingItem = getById (uID);
-    if (null != existingItem) {
-      calendar.getComponents ().remove (((ZarafaItem) existingItem).getComponent ());
-    } else {
-      String newUID = mapping.getMapping (uID);
-      if (null != newUID)
-        existingItem = getById (newUID);
-      else existingItem = null;
-      if (null != existingItem)
-        calendar.getComponents ().remove (((ZarafaItem) existingItem).getComponent ());
-    }
-    calendarIterator = keepIterator;
+    
+    ZarafaItem sourceItem = null;
+    
+    // if ID has a value search original
+    if (ID != null) 
+      sourceItem = (ZarafaItem) getById (ID);
+    
+    // if original item exists remove it
+    if (null != sourceItem)
+      calendar.getComponents ().remove (sourceItem.getComponent ());
+    
+    Uid newID = new Uid ();
+    // if ID == null generate new UID
+    if (ID == null) 
+      newID.setValue ("CoCoCo-" + UUID.randomUUID ());
+    else
+       newID.setValue (ID);
+
+    String uID = newID.getValue ();
 
     // Create new event
-    ZarafaItem zarafaItem = new ZarafaItem (item);
+    ZarafaItem zarafaItem = new ZarafaItem (item, uID);
     calendar.getComponents ().add (zarafaItem.getComponent ());
+
+    // reset iterator
+    calendarIterator = keepIterator;
 
     logger.trace ("Exiting modify");
     return uID;

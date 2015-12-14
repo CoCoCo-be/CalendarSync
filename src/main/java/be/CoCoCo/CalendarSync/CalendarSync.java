@@ -118,19 +118,18 @@ class CalendarSync {
   private static void synchronize () {
     logger.trace ("Entering synchronize");
     
-    CalendarItem targetItem, sourceItem = calendar1.getFirst ();
+    CalendarItem targetItem = null, sourceItem = calendar1.getFirst ();
     
     while (null != sourceItem) {
       String targetID, sourceID = sourceItem.getID ();
-      targetItem = calendar2.getById (sourceID);
-      if (null == targetItem) {
-         targetID = mapping.getMapping (sourceID);
-         if (null != targetID)
-           targetItem = calendar2.getById (targetID);
-      }
-      if (null == targetItem || sourceItem.isNewer (targetItem)) {
+      targetID = mapping.getMapping (sourceID);
+      if ( null != targetID ) 
+        targetItem = calendar2.getById (targetID);
+
+      if (null == targetID || null == targetItem || sourceItem.isNewer (targetItem)) {
         logger.trace ("CalendarItem " + sourceItem.getID () + " added te other Calendar");
-        calendar2.modify (sourceItem, mapping);
+        targetID = calendar2.modify (sourceItem, targetID);
+        mapping.addMapping (sourceID, targetID);
       }
       sourceItem = calendar1.getNext ();
     }
@@ -139,14 +138,14 @@ class CalendarSync {
     
     while (null != sourceItem) {
       String targetID, sourceID = sourceItem.getID ();
-      targetItem = calendar1.getById (sourceID);
-      if (null == targetItem) {
-         targetID = mapping.getMapping (sourceID);
-         targetItem = calendar1.getById (targetID);
-      }
-      if (null == targetItem || sourceItem.isNewer (targetItem)) {
+      targetID = mapping.getMapping (sourceID);
+      if ( null != targetID)
+        targetItem = calendar1.getById (targetID);
+
+      if (null == targetID || null == targetItem || sourceItem.isNewer (targetItem)) {
         logger.trace ("CalendarItem " + sourceItem.getID () + " added te other Calendar");
-        calendar1.modify (sourceItem, mapping);
+        targetID = calendar1.modify (sourceItem, targetID);
+        mapping.addMapping (sourceID, targetID);
       }
       sourceItem = calendar2.getNext ();
     }

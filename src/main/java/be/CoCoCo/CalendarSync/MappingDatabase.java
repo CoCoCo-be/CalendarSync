@@ -8,6 +8,7 @@ package be.CoCoCo.CalendarSync;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -23,6 +24,7 @@ import org.hibernate.service.ServiceRegistry;
  */
 class MappingDatabase {
 
+  static Logger logger = Logger.getLogger (MappingDatabase.class);
   private static SessionFactory factory = createSessionFactory (); 
   private static ServiceRegistry serviceRegistry;
 
@@ -37,7 +39,14 @@ class MappingDatabase {
   public MappingDatabase () {
   }
 
+  /**
+   * @param UID1
+   * @param UID2
+   */
   public void addMapping(String UID1, String UID2) {
+    // Only add mapping if not already exists
+    if (existMapping(UID1, UID2)) return;
+    
     Session session = factory.openSession();
     Transaction tx = null;
     try{
@@ -47,14 +56,18 @@ class MappingDatabase {
       tx.commit();
     }catch (HibernateException e) {
       if (tx!=null) tx.rollback();
-      //TODO catch error
-      e.printStackTrace(); 
+      logger.error ("Error adding mapping-record (" + UID1 + "," + UID2 + ") to mapping-database");
+      logger.info (e);
     }finally {
       session.close(); 
     }
     return;
   }
 
+  private boolean existMapping(String UID1, String UID2) {
+    return getMapping(UID1) == UID2;
+  }
+  
   @SuppressWarnings ("unchecked")
   public String getMapping(String UID) {
     Session session = factory.openSession ();
@@ -75,8 +88,8 @@ class MappingDatabase {
       }
     } catch (HibernateException e) {
       if (tx!=null) tx.rollback();
-      //TODO catch error
-      e.printStackTrace(); 
+      logger.error ("Error reading record from mappingDatabase");
+      logger.info (e);
     }finally {
       session.close(); 
     }
@@ -97,8 +110,8 @@ class MappingDatabase {
       tx.commit ();
     } catch (HibernateException e) {
       if (tx!=null) tx.rollback();
-      //TODO catch error
-      e.printStackTrace(); 
+      logger.error ("Error deleting record from mappingdatabase");
+      logger.info (e);
     }finally {
       session.close(); 
     }

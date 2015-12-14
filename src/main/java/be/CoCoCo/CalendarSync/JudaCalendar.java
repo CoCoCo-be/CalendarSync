@@ -210,38 +210,34 @@ class JudaCalendar implements Calendar {
    * @see be.CoCoCo.CalendarSync.Calendar#modify(be.CoCoCo.
    * CalendarSync.CalendarItem)
    */
-  public String modify (CalendarItem item, MappingDatabase mapping) {
+  public String modify (CalendarItem item, String ID) {
     logger.trace("Entering modify");    
     // store recordnumber to avoid side effects
     int recordNumber = judaDatabase.getCurrentRecordNumber ();
 
-    // GetID
-    String ID = item.getID();
-    // Search for item with same ID
-    JudaItem judaItem = (JudaItem) getById (ID);
+    JudaItem judaItem = null;
+    if ( null != ID) 
+      // Search for item with same ID
+      judaItem = (JudaItem) getById (ID);
+      
     if (null != judaItem) {
       // change judaItem with item
       judaItem.modify(judaDatabase, item);
     } else {
-      judaItem = (JudaItem) getById (mapping.getMapping (ID));
-      if ( null != judaItem) {
-        judaItem.modify(judaDatabase, item);
-      } else {
-        // clear the current record
-        try {
-          for (int i=1; i <= judaDatabase.getFieldCount (); i++)
-            judaDatabase.getField (i).put ("");
-          judaDatabase.write(true);
-        } catch (xBaseJException e) {
-          logger.error ("Error writing record to database");
-          logger.info (e);
-        } catch (IOException e) {
-          logger.error ("Error writing record to database");
-          logger.info (e); 
-        }
-        // add item to database
-        judaItem = new JudaItem(judaDatabase, item, mapping);
+      // clear the current record
+      try {
+        for (int i=1; i <= judaDatabase.getFieldCount (); i++)
+          judaDatabase.getField (i).put ("");
+        judaDatabase.write(true);
+      } catch (xBaseJException e) {
+        logger.error ("Error writing record to database");
+        logger.info (e);
+      } catch (IOException e) {
+        logger.error ("Error writing record to database");
+        logger.info (e); 
       }
+      // add item to database
+      judaItem = new JudaItem(judaDatabase, item);
     }
 
     // reset database to recordnumber to avoid side effects
