@@ -12,6 +12,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 import org.xBaseJ.DBF;
 import org.xBaseJ.xBaseJException;
@@ -117,8 +118,7 @@ class JudaItem implements CalendarItem {
     }
 
     if (agSyncID.isEmpty ()) {
-      if (agID.isEmpty ()) 
-        agID = agDossier + judaDatabase.getCurrentRecordNumber ();
+      agID = RandomStringUtils.randomAlphanumeric(10).toUpperCase();
       writeCharField (syncField, agID);
       try {
         database.update(true);
@@ -199,8 +199,8 @@ class JudaItem implements CalendarItem {
 
     // Create ID
     agSyncID = item.getID ();
-    if ( 40 <= agSyncID.length () ) 
-      agSyncID = dossier + judaDatabase.getCurrentRecordNumber ();
+    if ( 10 <= agSyncID.length () ) 
+      agSyncID = RandomStringUtils.randomAlphanumeric(10).toUpperCase();
     writeCharField (syncField, agSyncID);
 
     try {
@@ -265,7 +265,7 @@ class JudaItem implements CalendarItem {
    */
   public String getID () {
     logger.trace ("getID");
-    return agSyncID + "@CoCoCo.be";
+    return agSyncID;
   }
 
   /*
@@ -631,7 +631,7 @@ class JudaItem implements CalendarItem {
     try {
       agField.put (value);
     } catch (xBaseJException e) {
-      logger.error ("Error reading field summary");
+      logger.error ("Error writing field " + fieldName);
       logger.info (e);
       return;
     }

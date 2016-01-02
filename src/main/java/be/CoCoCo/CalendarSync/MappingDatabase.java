@@ -65,7 +65,11 @@ class MappingDatabase {
   }
 
   private boolean existMapping(String UID1, String UID2) {
-    return getMapping(UID1) == UID2;
+    String result = getMapping(UID1);
+    if (null != result)
+      return result.equals (UID2);
+    else
+      return false;
   }
   
   @SuppressWarnings ("unchecked")
@@ -79,7 +83,7 @@ class MappingDatabase {
       List<Mapping> results = (List<Mapping>) query.list ();
       if (results.isEmpty ()) {
         return null;
-      } else if ( 1 > results.size())
+      } else if ( 1 < results.size())
         throw new RuntimeException ("Double mapping found"); 
       else {
         Mapping mapping = results.get (0);

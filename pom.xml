@@ -42,6 +42,12 @@
     	<groupId>org.hibernate</groupId>
     	<artifactId>hibernate-core</artifactId>
     </dependency>
+    <dependency>
+    	<groupId>org.kie.modules</groupId>
+    	<artifactId>org-apache-commons-lang3</artifactId>
+    	<version>6.1.0.Final</version>
+    	<classifier>tests</classifier>
+    </dependency>
 	</dependencies>
   <description>Synchronize two calendars</description>
   <organization>
