@@ -133,7 +133,7 @@ class JudaItem implements CalendarItem {
     }
 
     description = agDescription;
-    summary = agDossier + " - " + agSummary
+    summary = agDossier + " - " + agSummary;
   }
 
   /**
