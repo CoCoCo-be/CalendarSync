@@ -65,11 +65,11 @@ public class JudaCalendarTest extends TestCase {
     // Test getFirst()
     CalendarItem item = judaCalendar.getFirst ();
     assertNotNull (item);
-    assertEquals ("2015/0023-0 - TDD - Vervaltermijn - laatste dag nadert", item.getSummary ());
+    assertEquals ("2014/0180-0 - Rechtbank van Eerste aanleg Limburg, afdeling Hasselt - sectie Familie-  en Jeugdrechtbank", item.getSummary ());
     // Test getNext()
     item=judaCalendar.getNext ();
     assertNotNull (item);
-    assertEquals ("2008/0186-0 - AF - Bespreking (elders) :", item.getSummary ());
+    assertEquals (" - Vakantie", item.getSummary ());
 }
 
   /**
