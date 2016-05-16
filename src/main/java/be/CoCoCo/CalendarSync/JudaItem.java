@@ -252,10 +252,10 @@ class JudaItem implements CalendarItem {
         break;
       default: return false;
     }
-    // Not all values are null
-    return (!((null == agID) && (null == summary) && (null == agUser) &&
-        (null == agModified ) && (null == agStartDate) && // (null == agEndCalendar) &&
-        (null == description) && (false == agExport)));
+    // Principle values are not null
+    return ((null != agID) && (null != summary) && (null != agUser) &&
+        (null != agModified ) && (null != agStartDate) && // (null == agEndCalendar) &&
+        (null != description) && (false != agExport));
   }
 
   /*
@@ -280,7 +280,7 @@ class JudaItem implements CalendarItem {
     boolean result;
     if (null == lastModified1) result = false;
     else if (null == lastModified2) result = true;
-    else result = lastModified ().before (calendarItem.lastModified ());
+    else result = lastModified ().after (calendarItem.lastModified ());
     logger.trace ("Exiting isNewer");
     return result;
   }

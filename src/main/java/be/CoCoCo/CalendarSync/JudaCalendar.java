@@ -136,7 +136,7 @@ class JudaCalendar implements Calendar {
       if ( (judaItem.valid()) && 
            (judaItem.getUser ().equalsIgnoreCase (username)) &&
            (judaItem.getStartDate().before (endLookWindow)) &&
-           (judaItem.getEndDate ().after (startLookWindow)) ) {
+           ((null != judaItem.getEndDate()) && judaItem.getEndDate ().after (startLookWindow)) ) {
         break;
       } else
         judaItem = null;
