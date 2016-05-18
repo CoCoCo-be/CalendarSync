@@ -140,7 +140,7 @@ class JudaItem implements CalendarItem {
    * @param databaseLocation
    * @param item
    */
-  public JudaItem (DBF judaDatabase, CalendarItem item) {
+  public JudaItem (DBF judaDatabase, CalendarItem item, String username) {
     // create new record
     Boolean allDay = item.isTransparent ();
     TimeZone tz = TimeZone.getTimeZone ("Europe/Brussels");
@@ -182,13 +182,13 @@ class JudaItem implements CalendarItem {
       String year = formater.format (date);
       dossier = year+"/0001-0";
       summary = summaryList[0];
-      writeCharField(dossierField, dossier);
+      writeCharField(dossierField, dossier.trim ());
       writeCharField(summaryField, summary);
     } else {
       // Write dossier number and summary to database
       dossier = summaryList[0];
       summary = summaryList[1];
-      writeCharField(dossierField, dossier);
+      writeCharField(dossierField, dossier.trim ());
       writeCharField(summaryField, summary); 
     }
 
@@ -203,6 +203,17 @@ class JudaItem implements CalendarItem {
       agSyncID = RandomStringUtils.randomAlphanumeric(10).toUpperCase();
     writeCharField (syncField, agSyncID);
 
+    // create username
+    writeCharField (userField, username);
+    //writeCharField ("AGUSER", "1");
+    writeCharField ("AGUSERN", "EW");
+    
+    // add fields 
+    writeLogicalField ("AGDOSKOP", false);
+    writeLogicalField ("AGAGDOS", false);
+    writeLogicalField ("AGAGKAN", true);
+    writeLogicalField ("AGAGPER", true);
+    
     try {
       judaDatabase.update(true);
     } catch (xBaseJException e) {
@@ -629,7 +640,7 @@ class JudaItem implements CalendarItem {
 
     if (null == agField) return;
     try {
-      agField.put (value);
+      agField.put (value.trim ());
     } catch (xBaseJException e) {
       logger.error ("Error writing field " + fieldName);
       logger.info (e);

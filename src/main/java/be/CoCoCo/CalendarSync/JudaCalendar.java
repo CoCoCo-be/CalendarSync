@@ -237,7 +237,7 @@ class JudaCalendar implements Calendar {
         logger.info (e); 
       }
       // add item to database
-      judaItem = new JudaItem(judaDatabase, item);
+      judaItem = new JudaItem(judaDatabase, item, username);
     }
 
     // reset database to recordnumber to avoid side effects

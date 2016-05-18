@@ -51,7 +51,7 @@ public class JudaItemTest extends TestCase {
    * Test method for {@link be.CoCoCo.CalendarSync.JudaItem#valid()}.
    */
   public final void testValid () {
-    assertTrue (judaItem1.valid ());
+    assertFalse (judaItem1.valid ());
     assertTrue (judaItem2.valid ());
   }
 
@@ -67,7 +67,7 @@ public class JudaItemTest extends TestCase {
    * Test method for {@link be.CoCoCo.CalendarSync.JudaItem#isNewer(be.CoCoCo.CalendarSync.CalendarItem)}.
    */
   public final void testIsNewer () {
-    assertTrue (judaItem1.isNewer (judaItem2));
+    assertFalse (judaItem1.isNewer (judaItem2));
   }
 
   /**
