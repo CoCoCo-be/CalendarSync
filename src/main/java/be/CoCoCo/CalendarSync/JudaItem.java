@@ -686,7 +686,6 @@ class JudaItem implements CalendarItem {
    *        value
    *          the boolean value
    */
-  @SuppressWarnings ("unused")
   private void writeLogicalField (String fieldName, Boolean value) {
 
     logger.trace ("Entering writeLogicalField");
